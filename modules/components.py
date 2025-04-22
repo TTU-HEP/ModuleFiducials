@@ -185,6 +185,28 @@ class BPFiducial(object):
         angle = math.atan2(avg_vec[1], avg_vec[0])
         return np.degrees(angle), avg_vec
 
+    def _orientation_vertices(self):
+        v01 = self.v1 - self.v2
+        v12 = self.v2 - self.v3
+        v23 = self.v3 - self.v1
+        # Normalize all vectors
+        v01 /= np.linalg.norm(v01)
+        v12 /= np.linalg.norm(v12)
+        v23 /= np.linalg.norm(v23)
+        # angle
+        angle12 = np.degrees(math.atan2(v12[1], v12[0]))
+        angle23 = np.degrees(math.atan2(v23[1], v23[0]))
+        angle01 = np.degrees(math.atan2(v01[1], v01[0]))
+        # average
+        avgle = (angle12 + angle23 + angle01) / 3
+        avgle_vec = (v12 + v23 + v01) / 3
+        norm = np.linalg.norm(avgle_vec)
+        if norm < 1e-10:
+            avgle_vec = np.array([1.0, 0.0])
+        else:
+            avgle_vec /= norm
+        return avgle, avgle_vec
+
     def _orientation_relative_to_BP3_BP4(self, pts):
         # Triangle edge directions
         v01 = pts[1] - pts[0]
@@ -231,8 +253,9 @@ class BPFiducial(object):
 
         # Centroid and orientation
         self.centroid = self._triangle_centroid(self.v1, self.v2, self.v3)
-        self.angle_deg, self.orientation_vector = self._orientation_relative_to_BP3_BP4(
-            self.vertices)
+        # self.angle_deg, self.orientation_vector = self._orientation_relative_to_BP3_BP4(
+        #    self.vertices)
+        self.angle_deg, self.orientation_vector = self._orientation_vertices()
 
     def visualize(self, output="test.png", xlim=(-10, 10), ylim=(-10, 10)):
         def plot_line(A, B, C):
