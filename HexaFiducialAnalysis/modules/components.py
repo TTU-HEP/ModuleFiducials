@@ -123,17 +123,21 @@ class AssemblyTrayFiducials(object):
 
     def ToGantry(self):
         if self.IsOGPCoord():
+            fiducials_new = self.fiducials.copy()
             print("Converting to Gantry coordinates")
             for key, fiducial in self.fiducials.items():
-                self.fiducials[key] = fiducial.FlipY()
+                fiducials_new[key] = fiducial.FlipY()
+            self.fiducials = fiducials_new
             self.isOGP = False
         return self
 
     def ToOGP(self):
         if self.IsGantryCoord():
             print("Converting to OGP coordinates")
+            fiducials_new = self.fiducials.copy()
             for key, fiducial in self.fiducials.items():
-                self.fiducials[key] = fiducial.FlipY()
+                fiducials_new[key] = fiducial.FlipY()
+            self.fiducials = fiducials_new
             self.isOGP = True
         return self
 
@@ -206,16 +210,19 @@ class HexaEdgeFiducials(object):
     def ToGantry(self):
         if self.IsOGPCoord():
             print("Converting to Gantry coordinates")
-            for fiducial in self.fiducials:
-                fiducial = fiducial.FlipY()
+            fiducials_new = self.fiducials.copy()
+            for idx, fiducial in enumerate(self.fiducials):
+                fiducials_new[idx] = fiducial.FlipY()
+            self.fiducials = fiducials_new
             self.isOGP = False
         return self
 
     def ToOGP(self):
         if self.IsGantryCoord():
             print("Converting to OGP coordinates")
-            for fiducial in self.fiducials:
-                fiducial = fiducial.FlipY()
+            fiducials_new = self.fiducials.copy()
+            for idx, fiducial in enumerate(self.fiducials):
+                fiducials_new[idx] = fiducial.FlipY()
             self.isOGP = True
         return self
 
@@ -299,7 +306,8 @@ def fit_hexagon_with_radius_constraint(hexagon: HexaEdgeFiducials, target_radius
         hexagon_fit_objective,
         x0=[centroid[0], centroid[1], r0, theta0],
         args=(points, target_radius),
-        bounds=[(None, None), (None, None), (1e-3, None), (None, None)],
+        bounds=[(None, None), (None, None), (target_radius -
+                                             5.0, target_radius + 5.0), (None, None)],
         options={"maxiter": 1000}
     )
 

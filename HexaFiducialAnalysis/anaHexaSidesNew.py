@@ -5,10 +5,25 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def extractHexaFiducials(file_name, sheet_name='WorkSheet_01', output_name='HexaFiducial.png', target_radius=96.4):
+def extractHexaFiducials(file_name, sheet_name='WorkSheet_01', output_name='HexaFiducial.png', ToGantry=False):
     xls = pd.ExcelFile(file_name)
     df = pd.read_excel(xls, sheet_name=sheet_name)
     col_name = 'Unnamed: 6'
+
+    # extra TF and BF fiducials for alignment
+    TFX = float(df[col_name][141])
+    TFY = float(df[col_name][142])
+    TF = Fiducial(TFX, TFY)
+    BFX = float(df[col_name][157])
+    BFY = float(df[col_name][158])
+    BF = Fiducial(BFX, BFY)
+    fids_TFBF = {
+        'TF': TF,
+        'BF': BF
+    }
+    if ToGantry:
+        fids_TFBF['TF'] = TF.FlipY()
+        fids_TFBF['BF'] = BF.FlipY()
 
     # pos 1
     f1X = float(df[col_name][8])
@@ -46,15 +61,11 @@ def extractHexaFiducials(file_name, sheet_name='WorkSheet_01', output_name='Hexa
     f11 = Fiducial(f11X, f11Y)
 
     fiducials_pos1_hexaboard = HexaEdgeFiducials(
-        [f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11])
+        [f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11], TF=TF, BF=BF)
     fiducials_pos1_hexaboard.visualize(output_name=output_name.replace(
         ".png", "_pos1.png"))
-
-    results = fit_hexagon_with_radius_constraint(
-        fiducials_pos1_hexaboard, target_radius)
-    plot_fitted_hexagon(results, output_name.replace(
-        ".png", "_fitted_hexagon_pos1.png"))
-    fiducials_pos1_hexaboard.fitted_hexagon = results
+    if ToGantry:
+        fiducials_pos1_hexaboard.ToGantry()
 
     # pos 2
     f1X = float(df[col_name][74])
@@ -92,31 +103,16 @@ def extractHexaFiducials(file_name, sheet_name='WorkSheet_01', output_name='Hexa
     f11 = Fiducial(f11X, f11Y)
 
     fiducials_pos2_hexaboard = HexaEdgeFiducials(
-        [f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11])
+        [f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11], TF=TF, BF=BF)
     fiducials_pos2_hexaboard.visualize(output_name=output_name.replace(
         ".png", "_pos2.png"))
-    results = fit_hexagon_with_radius_constraint(
-        fiducials_pos2_hexaboard, target_radius)
-    plot_fitted_hexagon(results, output_name.replace(
-        ".png", "_fitted_hexagon_pos2.png"))
-    fiducials_pos2_hexaboard.fitted_hexagon = results
-
-    # extra TF and BF fiducials for alignment
-    TFX = float(df[col_name][141])
-    TFY = float(df[col_name][142])
-    TF = Fiducial(TFX, TFY)
-    BFX = float(df[col_name][157])
-    BFY = float(df[col_name][158])
-    BF = Fiducial(BFX, BFY)
-    fids_TFBF = {
-        'TF': TF,
-        'BF': BF
-    }
+    if ToGantry:
+        fiducials_pos2_hexaboard.ToGantry()
 
     return fiducials_pos1_hexaboard, fiducials_pos2_hexaboard, fids_TFBF
 
 
-def extractTrayFiducials(output_name='TrayFiducial.png'):
+def extractTrayFiducials(output_name='TrayFiducial.png', ToGantry=False):
     BF = Fiducial(0.0, 0.0)
     TF = Fiducial(0.0, 392.469)
     OP1 = Fiducial(60.494, 285.311)
@@ -134,6 +130,8 @@ def extractTrayFiducials(output_name='TrayFiducial.png'):
     }
     fiducials = AssemblyTrayFiducials(fiducials)
     fiducials.visualize(output_name=output_name)
+    if ToGantry:
+        fiducials.ToGantry()
     return fiducials
 
 
@@ -160,11 +158,36 @@ if __name__ == "__main__":
     truths_2 = []
     recos_2 = []
 
+    ToGantry = False
+    target_radius = 96.05
+
+    TF_new = Fiducial(141.981122, -700.740873)
+    BF_new = Fiducial(122.303276, -1092.058439)
+    fids_TFBF_new = {
+        'TF': TF_new,
+        'BF': BF_new
+    }
+
     for idx, file in enumerate(files):
-        tray_org = extractTrayFiducials("plots/TrayFiducial.png")
+        tray_org = extractTrayFiducials(
+            "plots/TrayFiducial.png", ToGantry=ToGantry)
         print(f"Processing {file}")
         hex1, hex2, fids_TFBF = extractHexaFiducials(
-            file, output_name=f"plots/test_{idx}.png", target_radius=96.05)
+            file, output_name=f"plots/test_{idx}.png", ToGantry=ToGantry)
+
+        hex1 = hex1.Align(fids_TFBF_new)
+        hex2 = hex2.Align(fids_TFBF_new)
+
+        results = fit_hexagon_with_radius_constraint(
+            hex1, target_radius)
+        plot_fitted_hexagon(
+            results, f"plots/test_{idx}_fitted_hexagon_pos1.png")
+        hex1.fitted_hexagon = results
+        results = fit_hexagon_with_radius_constraint(
+            hex2, target_radius)
+        plot_fitted_hexagon(
+            results, f"plots/test_{idx}_fitted_hexagon_pos2.png")
+        hex2.fitted_hexagon = results
 
         angle1 = find_angle_to_rightmost_side_midpoint(
             hex1.fitted_hexagon['center'], hex1.fitted_hexagon['radius'], hex1.fitted_hexagon['theta'], False)
@@ -173,7 +196,8 @@ if __name__ == "__main__":
         print("Angle 1:", angle1[0])
         print("Angle 2:", angle2[0])
 
-        tray = tray_org.Align(fids_TFBF)
+        # tray = tray_org.Align(fids_TFBF)
+        tray = tray_org.Align(fids_TFBF_new)
         tray.visualize(f"plots/TrayFiducial_{idx}_aligned.png")
         print("Tray center pos1 :", tray.GetCenter(1))
         print("Tray angle pos1 :", tray.GetAngle(1))
@@ -222,7 +246,7 @@ if __name__ == "__main__":
         plt.figure(figsize=(5, 5))
 
         # Plot truth line and point
-        plt.plot([tx, t_end[0]], [ty, t_end[1]], 'b-',
+        plt.plot([tx, t_end[0]], [ty, t_end[1]], 'b--',
                  label='Truth Line', linewidth=2)
         plt.scatter(tx, ty, color='blue', marker='o', s=100,
                     edgecolors='black', label='Truth Point')
@@ -231,17 +255,23 @@ if __name__ == "__main__":
             r_angle = np.radians(r_angle)
             r_end = [rx + line_length *
                      np.cos(r_angle), ry + line_length * np.sin(r_angle)]
+            r_end_goal = [rx + line_length *
+                          np.cos(t_angle), ry + line_length * np.sin(t_angle)]
 
             # Plot reco line and point
             if i >= 5:
                 # running with fixes
-                plt.plot([rx, r_end[0]], [ry, r_end[1]], 'g--',
+                plt.plot([rx, r_end[0]], [ry, r_end[1]], 'g-',
                          label=f'Reco Line #{i}', linewidth=2)
+                plt.plot([rx, r_end_goal[0]], [ry, r_end_goal[1]], 'g--',
+                         label=f'Reco Line Goal #{i}', linewidth=2)
                 plt.scatter(rx, ry, color='green', marker='^', s=100,
                             edgecolors='black', label='Reco Point')
             else:
-                plt.plot([rx, r_end[0]], [ry, r_end[1]], 'r--',
+                plt.plot([rx, r_end[0]], [ry, r_end[1]], 'r-',
                          label=f'Reco Line #{i}', linewidth=2)
+                plt.plot([rx, r_end_goal[0]], [ry, r_end_goal[1]], 'r--',
+                         label=f'Reco Line Goal #{i}', linewidth=2)
                 plt.scatter(rx, ry, color='red', marker='^', s=100,
                             edgecolors='black', label='Reco Point')
 
