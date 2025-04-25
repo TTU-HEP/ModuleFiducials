@@ -11,6 +11,35 @@ from scipy.optimize import minimize
 matplotlib.use('Agg')
 
 
+def AlignTFBF(fiducial, fids_TF_BF_current, fids_TF_BF_new, base="BF"):
+    """
+    rotate and shift the fiducials to the new TF and BF positions
+    """
+    assert fids_TF_BF_current.keys() == {'TF', 'BF'} and fids_TF_BF_new.keys() == {'TF', 'BF'}, \
+        "fids_TF_BF must have 2 elements (TF, BF)"
+    assert isinstance(fids_TF_BF_new['TF'], Fiducial) and isinstance(fids_TF_BF_new['BF'], Fiducial) and isinstance(fids_TF_BF_current['TF'], Fiducial) and isinstance(fids_TF_BF_current['BF'], Fiducial),  \
+        "TF and BF must be instances of the Fiducial class"
+
+    # use TF/BF to shift the other fiducials
+    # use TF and BF angle to rotate the other fiducials
+    target = 'TF' if base == 'BF' else 'BF'
+
+    shift_X = fids_TF_BF_new[base].GetX() - fids_TF_BF_current[base].GetX()
+    shift_Y = fids_TF_BF_new[base].GetY() - fids_TF_BF_current[base].GetY()
+    angle_current = FidAngle(
+        fids_TF_BF_current[base], fids_TF_BF_current[target])
+    angle_new = FidAngle(fids_TF_BF_new[base], fids_TF_BF_new[target])
+    angle_shift = angle_new - angle_current
+    angle_shift = np.deg2rad(angle_shift)  # Convert to radians
+
+    # print("fiducials before rotation for pos", pos, ":", fiducial)
+    fiducial_new = fiducial.Rotate(fids_TF_BF_current[base], angle_shift)
+    # print("fiducials after rotation for pos", pos, ":", fiducial_new)
+    fiducial_new.X += shift_X
+    fiducial_new.Y += shift_Y
+    return fiducial_new
+
+
 class Fiducial(object):
     def __init__(self, X, Y):
         self.X = X
@@ -42,13 +71,22 @@ class Fiducial(object):
     def GetY(self):
         return self.Y
 
-    def Rotate(self, X0, Y0, angle):
+    def RotateXY(self, X0, Y0, angle):
         # Rotate the fiducial points around the center (X0, Y0) by the given angle
         X_rotated = (self.X - X0) * np.cos(angle) - \
             (self.Y - Y0) * np.sin(angle) + X0
         Y_rotated = (self.X - X0) * np.sin(angle) + \
             (self.Y - Y0) * np.cos(angle) + Y0
         return Fiducial(X_rotated, Y_rotated)
+
+    def Rotate(self, fiducial, angle):
+        return self.RotateXY(fiducial.X, fiducial.Y, angle)
+
+    def FlipY(self):
+        """
+        OGP and gantry has opposite y directions
+        """
+        return Fiducial(self.X, -self.Y)
 
 
 def FidAngle(fid1, fid2):
@@ -59,7 +97,7 @@ def FidAngle(fid1, fid2):
 
 
 class AssemblyTrayFiducials(object):
-    def __init__(self, fiducials):
+    def __init__(self, fiducials, isOGP=True):
         for fiducial in fiducials.values():
             assert isinstance(fiducial, Fiducial), \
                 "All fiducials must be instances of the Fiducial class"
@@ -67,12 +105,37 @@ class AssemblyTrayFiducials(object):
             fiducials.keys() == {'TF', 'BF', 'CP1', 'OP1', 'CP2', 'OP2', 'F3'}, \
             "Fiducial must have 6 or 7 elements (TF, BF, CP1, OP1, CP2, OP2, [F3])"
         self.fiducials = fiducials
+        self.isOGP = isOGP
 
     def __str__(self):
         return f"AssemblyTrayFiducials({self.fiducials})"
 
     def __repr__(self):
         return self.__str__()
+
+    def IsOGPCoord(self):
+        # Gantry and OGP have opposite y directions
+        # OGP is the default
+        return self.isOGP
+
+    def IsGantryCoord(self):
+        return not self.isOGP
+
+    def ToGantry(self):
+        if self.IsOGPCoord():
+            print("Converting to Gantry coordinates")
+            for key, fiducial in self.fiducials.items():
+                self.fiducials[key] = fiducial.FlipY()
+            self.isOGP = False
+        return self
+
+    def ToOGP(self):
+        if self.IsGantryCoord():
+            print("Converting to OGP coordinates")
+            for key, fiducial in self.fiducials.items():
+                self.fiducials[key] = fiducial.FlipY()
+            self.isOGP = True
+        return self
 
     def GetCenter(self, pos=1):
         assert pos in [1, 2], "pos must be 1 or 2"
@@ -99,59 +162,32 @@ class AssemblyTrayFiducials(object):
         plt.close()
         return
 
-    def Align(self, fids_TF_BF):
+    def Align(self, fids_TF_BF, base="BF"):
         """
         rotate the fiducials to the new TF and BF positions
         """
-        assert fids_TF_BF.keys() == {'TF', 'BF'}, \
-            "fids_TF_BF must have 2 elements (TF, BF)"
-        assert isinstance(fids_TF_BF['TF'], Fiducial) and isinstance(fids_TF_BF['BF'], Fiducial), \
-            "TF and BF must be instances of the Fiducial class"
+        fids_TF_BF_current = {}
+        fids_TF_BF_current['TF'] = self.fiducials['TF']
+        fids_TF_BF_current['BF'] = self.fiducials['BF']
 
-        fids_new = {
-            'TF': fids_TF_BF['TF'],
-            'BF': fids_TF_BF['BF'],
-            'CP1': self.fiducials['CP1'],
-            'OP1': self.fiducials['OP1'],
-            'CP2': self.fiducials['CP2'],
-            'OP2': self.fiducials['OP2']
-        }
+        fids_new = self.fiducials.copy()
 
-        base = 'BF'
-        target = 'TF'
-
-        shift_X = fids_TF_BF[base].GetX() - self.fiducials[base].GetX()
-        shift_Y = fids_TF_BF[base].GetY() - self.fiducials[base].GetY()
-        angle_current = FidAngle(self.fiducials[base], self.fiducials[target])
-        angle_new = FidAngle(fids_TF_BF[base], fids_TF_BF[target])
-        angle_shift = angle_new - angle_current
-        angle_shift = np.deg2rad(angle_shift)  # Convert to radians
-        # print("fid TF_BF: TF", fids_TF_BF['TF'])
-        # print("fid TF_BF: BF", fids_TF_BF['BF'])
-        # print("fid current: TF", self.fiducials['TF'])
-        # print("fid current: BF", self.fiducials['BF'])
-        # print("angle current:", angle_current)
-        # print("angle new:", angle_new)
-        # print("angle shift:", angle_shift)
         for pos, fiducial in self.fiducials.items():
-            if pos == 'TF' or pos == 'BF':
-                continue
-            # print("fiducials before rotation for pos", pos, ":", fiducial)
-            fids_new[pos] = fiducial.Rotate(
-                self.fiducials[base].X, self.fiducials[base].Y, angle_shift)
-            # print("fiducials after rotation for pos", pos, ":", fids_new[pos])
-            fids_new[pos].X += shift_X
-            fids_new[pos].Y += shift_Y
+            fids_new[pos] = AlignTFBF(
+                fiducial, fids_TF_BF_current, fids_TF_BF, base=base)
 
         return AssemblyTrayFiducials(fids_new)
 
 
 class HexaEdgeFiducials(object):
-    def __init__(self, fiducials):
+    def __init__(self, fiducials, isOGP=True, TF=None, BF=None):
         for fiducial in fiducials:
             assert isinstance(fiducial, Fiducial), \
                 "All fiducials must be instances of the Fiducial class"
         self.fiducials = fiducials
+        self.TF = TF
+        self.BF = BF
+        self.isOGP = isOGP
 
     def __str__(self):
         return f"HexaEdgeFiducials({self.fiducials})"
@@ -159,15 +195,57 @@ class HexaEdgeFiducials(object):
     def __repr__(self):
         return self.__str__()
 
+    def IsOGPCoord(self):
+        # Gantry and OGP have opposite y directions
+        # OGP is the default
+        return self.isOGP
+
+    def IsGantryCoord(self):
+        return not self.isOGP
+
+    def ToGantry(self):
+        if self.IsOGPCoord():
+            print("Converting to Gantry coordinates")
+            for fiducial in self.fiducials:
+                fiducial = fiducial.FlipY()
+            self.isOGP = False
+        return self
+
+    def ToOGP(self):
+        if self.IsGantryCoord():
+            print("Converting to OGP coordinates")
+            for fiducial in self.fiducials:
+                fiducial = fiducial.FlipY()
+            self.isOGP = True
+        return self
+
+    def Align(self, fids_TF_BF, base="BF"):
+        fids_TF_BF_current = {}
+        fids_TF_BF_current['TF'] = self.TF
+        fids_TF_BF_current['BF'] = self.BF
+        fids_new = self.fiducials.copy()
+        for pos, fiducial in enumerate(self.fiducials):
+            fids_new[pos] = AlignTFBF(
+                fiducial, fids_TF_BF_current, fids_TF_BF, base=base)
+        return HexaEdgeFiducials(fids_new, isOGP=self.isOGP, TF=fids_TF_BF['TF'], BF=fids_TF_BF['BF'])
+
     def XYPoints(self):
         return np.array([fiducial.XY() for fiducial in self.fiducials])
 
-    def visualize(self, output_name):
+    def visualize(self, output_name, includeTFBF=False):
         plt.figure(figsize=(8, 8))
         for fiducial in self.fiducials:
             x, y = fiducial.XY()
             plt.scatter(x, y)
 
+        if includeTFBF:
+            if self.TF is not None:
+                x, y = self.TF.XY()
+                plt.scatter(x, y, color='red', label='TF')
+            if self.BF is not None:
+                x, y = self.BF.XY()
+                plt.scatter(x, y, color='blue', label='BF')
+            plt.legend()
         plt.xlabel("X [mm]")
         plt.ylabel("Y [mm]")
         plt.title("HexaEdge Fiducials")
