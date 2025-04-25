@@ -5,6 +5,9 @@ import math
 import matplotlib
 import numpy as np
 from modules.helpers import Angle, GetCenterAndAngle, MeanAndRMS  # noqa
+from scipy.optimize import minimize
+from itertools import permutations
+
 matplotlib.use('Agg')
 
 
@@ -103,6 +106,176 @@ class HexaFiducials(object):
         else:
             raise ValueError("Number of fiducials must be 4 or 6")
         return center_x, center_y, angle
+
+
+class HexaEdgeFiducials(object):
+    def __init__(self, CH1_X=None, CH1_Y=None, CH81_X=None, CH81_Y=None,
+                 CH8_X=None, CH8_Y=None, CH95_X=None, CH95_Y=None,
+                 CH198_X=None, CH198_Y=None, CH190_X=None, CH190_Y=None):
+        self.CH1_X = CH1_X
+        self.CH1_Y = CH1_Y
+        self.CH81_X = CH81_X
+        self.CH81_Y = CH81_Y
+        self.CH8_X = CH8_X
+        self.CH8_Y = CH8_Y
+        self.CH95_X = CH95_X
+        self.CH95_Y = CH95_Y
+        self.CH198_X = CH198_X
+        self.CH198_Y = CH198_Y
+        self.CH190_X = CH190_X
+        self.CH190_Y = CH190_Y
+
+    def visualize(self, output_name):
+        print("Visualizing HexaEdgeFiducials")
+        plt.figure(figsize=(8, 8))
+        channels = {
+            "CH1": (self.CH1_X, self.CH1_Y),
+            "CH81": (self.CH81_X, self.CH81_Y),
+            "CH8": (self.CH8_X, self.CH8_Y),
+            "CH95": (self.CH95_X, self.CH95_Y),
+            "CH198": (self.CH198_X, self.CH198_Y),
+            "CH190": (self.CH190_X, self.CH190_Y)
+        }
+
+        for label, (x, y) in channels.items():
+            if x is not None and y is not None:
+                plt.scatter(x, y, label=label)
+                plt.text(x, y, label, fontsize=9, ha='right')
+
+        plt.xlabel("X [mm]")
+        plt.ylabel("Y [mm]")
+        plt.title("Channel Positions")
+        plt.legend()
+        plt.grid(True)
+        plt.axis('equal')
+        print("Saving figure to", output_name)
+        plt.show()
+        plt.savefig(output_name)
+        plt.close()
+        return
+
+    def get_hex_edges(self, cx, cy, r, theta):
+        vertices = [
+            (cx + r * np.cos(theta + i * np.pi / 3),
+             cy + r * np.sin(theta + i * np.pi / 3)) for i in range(6)
+        ]
+        return [(vertices[i], vertices[(i+1) % 6]) for i in range(6)]
+
+    def get_hex_vertices(self, cx, cy, r, theta):
+        return [
+            (cx + r * np.cos(theta + i * np.pi / 3),
+             cy + r * np.sin(theta + i * np.pi / 3)) for i in range(6)
+        ]
+
+    def point_to_segment_dist(self, p, a, b):
+        p, a, b = np.array(p), np.array(a), np.array(b)
+        ap = p - a
+        ab = b - a
+        t = np.clip(np.dot(ap, ab) / np.dot(ab, ab), 0, 1)
+        closest = a + t * ab
+        return np.linalg.norm(p - closest)
+
+    def point_to_closest_corner_dist(self, point, vertices):
+        return min(np.linalg.norm(np.array(point) - np.array(v)) for v in vertices)
+
+    def loss_fixed_assignment(self, params, points, edge_indices):
+        if len(points) != len(edge_indices):
+            return 1e6  # invalid, skip
+        cx, cy, r, theta = params
+        edges = self.get_hex_edges(cx, cy, r, theta)
+        total = 0
+        for i, p in enumerate(points):
+            a, b = edges[edge_indices[i]]
+            total += self.point_to_segment_dist(p, a, b) ** 2
+        return total
+
+    def find_all_fits(self, points, tol=1e-3):
+        results = []
+        n = len(points)
+        for edge_indices in permutations(range(6), n):
+            centroid = np.mean(points, axis=0)
+            init = [centroid[0], centroid[1], 1.0, 0.0]
+            res = minimize(self.loss_fixed_assignment, init, args=(
+                points, edge_indices), method='Nelder-Mead')
+            if res.success and res.fun < tol:
+                params = tuple(np.round(res.x, 6))
+                if params not in results:
+                    results.append(params)
+        return results
+
+    def select_closest_to_corner_solution(self, points, hex_solutions):
+        best_score = float('inf')
+        best_params = None
+        for params in hex_solutions:
+            cx, cy, r, theta = params
+            vertices = self.get_hex_vertices(cx, cy, r, theta)
+            total_dist = sum(self.point_to_closest_corner_dist(
+                p, vertices) for p in points)
+            if total_dist < best_score:
+                best_score = total_dist
+                best_params = params
+        return best_params
+
+    def select_closest_to_radius_solution(self, points, hex_solutions, radius=94.59):
+        best_score = float('inf')
+        best_params = None
+        for params in hex_solutions:
+            cx, cy, r, theta = params
+            if abs(r - radius) < best_score:
+                best_score = abs(r - radius)
+                best_params = params
+        return best_params
+
+    def plot_hexagon(self, cx, cy, r, theta, points, output_name):
+        vertices = self.get_hex_vertices(cx, cy, r, theta)
+        hexagon = np.array(vertices + [vertices[0]])  # close loop
+
+        plt.plot(hexagon[:, 0], hexagon[:, 1], 'b-', label="Fitted Hexagon")
+        plt.plot(*zip(*points), 'ro', label="Input Points")
+        plt.gca().set_aspect('equal')
+        plt.title("Best Hexagon Fit (Closest to Corners)")
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+        plt.savefig(output_name)
+
+    def runFit(self, output_name):
+        points = []
+        if self.CH1_X is not None and self.CH1_Y is not None:
+            points.append((self.CH1_X, self.CH1_Y))
+        if self.CH81_X is not None and self.CH81_Y is not None:
+            points.append((self.CH81_X, self.CH81_Y))
+        if self.CH8_X is not None and self.CH8_Y is not None:
+            points.append((self.CH8_X, self.CH8_Y))
+        if self.CH95_X is not None and self.CH95_Y is not None:
+            points.append((self.CH95_X, self.CH95_Y))
+        if self.CH198_X is not None and self.CH198_Y is not None:
+            points.append((self.CH198_X, self.CH198_Y))
+        if self.CH190_X is not None and self.CH190_Y is not None:
+            points.append((self.CH190_X, self.CH190_Y))
+
+        if len(points) < 3:
+            raise ValueError(
+                "At least 3 points are required to fit a hexagon.")
+
+        points = points[:3]  # Use only the first three points for fitting
+
+        # Fit hexagon to boundary points
+        all_fits = self.find_all_fits(points)
+
+        print(f"Total valid fits found: {len(all_fits)}")
+        if not all_fits:
+            print("No valid hexagon fits found.")
+        else:
+            # best_fit = self.select_closest_to_corner_solution(points, all_fits)
+            best_fit = self.select_closest_to_radius_solution(points, all_fits)
+            print(f"Best fit (closest to corners):")
+            print(f"  Center: ({best_fit[0]}, {best_fit[1]})")
+            print(f"  Radius: {best_fit[2]}")
+            print(f"  Angle (rad): {best_fit[3]}")
+            self.plot_hexagon(*best_fit, points, output_name)
+        # Return the fitted parameters
+        return best_fit
 
 
 class BPFiducial(object):
