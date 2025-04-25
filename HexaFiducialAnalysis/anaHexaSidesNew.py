@@ -218,8 +218,6 @@ if __name__ == "__main__":
         t_angle = np.radians(t_angle)
         t_end = [tx + line_length *
                  np.cos(t_angle), ty + line_length * np.sin(t_angle)]
-        print("truth :", tx, ty, t_angle)
-        print("truth end :", t_end[0], t_end[1])
 
         plt.figure(figsize=(5, 5))
 
@@ -233,8 +231,6 @@ if __name__ == "__main__":
             r_angle = np.radians(r_angle)
             r_end = [rx + line_length *
                      np.cos(r_angle), ry + line_length * np.sin(r_angle)]
-            print("reco :", rx, ry, r_angle)
-            print("reco end :", r_end[0], r_end[1])
 
             # Plot reco line and point
             if i >= 5:
