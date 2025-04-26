@@ -3,6 +3,7 @@ import pandas as pd
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.patches import Polygon
 
 
 def extractHexaFiducials(file_name, sheet_name='WorkSheet_01', output_name='HexaFiducial.png', ToGantry=False):
@@ -202,15 +203,23 @@ def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparis
     ax_main.set_aspect('equal')
     ax_main.set_xlabel('X')
     ax_main.set_ylabel('Y')
-    ax_main.set_title('Points Only')
+    ax_main.ticklabel_format(useOffset=True, axis='x', style='sci')
+    ax_main.set_title('XY Positions')
 
     # --- Second plot: all arrows starting from the same point ---
     origin_x = 0
     origin_y = 0
 
+    if t_angle_rad > np.pi/2.0:
+        t_angle_rad_approx = np.radians(180.0)
+        doLeft = True
+    else:
+        t_angle_rad_approx = 0.0
+        doLeft = False
+
     # Plot truth arrow
     ax_angle.quiver(origin_x, origin_y,
-                    np.cos(t_angle_rad), np.sin(t_angle_rad),
+                    np.cos(t_angle_rad_approx), np.sin(t_angle_rad_approx),
                     angles='xy', scale_units='xy', scale=10,
                     color='blue', linewidth=2, label='Truth')
 
@@ -225,48 +234,41 @@ def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparis
         else:
             col = colors[0]
 
-        ax_angle.quiver(origin_x, origin_y,
-                        np.cos(r_angle_rad), np.sin(r_angle_rad),
+        r_angle_rad_diff = r_angle_rad - t_angle_rad + t_angle_rad_approx
+        ax_angle.quiver(origin_x, origin_y, np.cos(r_angle_rad_diff),
+                        np.sin(r_angle_rad_diff),
                         angles='xy', scale_units='xy', scale=10,
                         color=col, linewidth=2)
         y_vals.append(np.sin(r_angle_rad))
-        print("x:", np.cos(r_angle_rad))
-        print("y:", np.sin(r_angle_rad))
 
-   # Add a horizontal dashed line at 0.01 degrees
-    ref_angle_rad = np.radians(0.01)
-    ax_angle.quiver(origin_x, origin_y,
-                    np.cos(ref_angle_rad), np.sin(ref_angle_rad),
-                    angles='xy', scale_units='xy', scale=10,
-                    color='black', linewidth=2, linestyle='--', label='0.01 degrees')
-    ax_angle.quiver(origin_x, origin_y,
-                    np.cos(-ref_angle_rad), np.sin(-ref_angle_rad),
-                    angles='xy', scale_units='xy', scale=10,
-                    color='black', linewidth=2, linestyle='--')
+    # Parameters
+    angle_center = t_angle_rad_approx  # radians
+    angle_plus = np.deg2rad(0.01)      # convert 0.01 deg to rad
+    length = 10  # same as your quiver scale
 
-    # --- Add a 0.01 degree shaded cone ---
-    cone_half_angle_deg = 0.01
-    cone_half_angle_rad = np.radians(cone_half_angle_deg)
+    # Compute three points: center, left boundary, right boundary
+    left_x = origin_x + length * np.cos(angle_center + angle_plus)
+    left_y = origin_y + length * np.sin(angle_center + angle_plus)
 
-    # Generate points for the cone boundary
-    cone_angles = np.linspace(t_angle_rad - cone_half_angle_rad,
-                              t_angle_rad + cone_half_angle_rad,
-                              100)
-    cone_radius = 0.101  # Length of the cone arms for display
-    cone_x = cone_radius * np.cos(cone_angles)
-    cone_y = cone_radius * np.sin(cone_angles)
+    right_x = origin_x + length * np.cos(angle_center - angle_plus)
+    right_y = origin_y + length * np.sin(angle_center - angle_plus)
 
-    # Fill the cone area
-    ax_angle.fill_between(cone_x, cone_y, -cone_y,
-                          color='gray', alpha=0.5, label='±0.01° Cone')
+    # Create the polygon for the cone
+    cone = Polygon([[origin_x, origin_y],
+                    [left_x, left_y],
+                    [right_x, right_y]],
+                   closed=True, color='blue', alpha=0.1, label='±0.01° cone')
 
-    y_max = max(y_vals)
-    y_min = min(y_vals)
-    y_diff = y_max - y_min
-    # ax_angle.set_ylim(y_min - y_diff * 0.5, y_max + y_diff * 0.5)
+    # Add it to the plot
+    ax_angle.add_patch(cone)
+
     ax_angle.set_ylim(-0.0001, 0.0001)
-    ax_angle.set_xlim(-0.11, 0.11)
+    if doLeft:
+        ax_angle.set_xlim(-0.11, 0.)
+    else:
+        ax_angle.set_xlim(0., 0.11)
     ax_angle.grid(True)
+    # ax_angle.set_aspect('equal')
     ax_angle.set_title('Angle Directions')
 
     plt.savefig(output_name)
@@ -394,6 +396,13 @@ def compareBPFiducials():
         "data/BP_Position_Run2_Swapped_04_25_2025.xls",
         "data/BP_Position_Run3_Swapped_04_25_2025.xls",
     ]
+    files = [
+        "data/Ti_BP_Position_Run1_04_26_2025.xls",
+        "data/Ti_BP_Position_Run2_04_26_2025.xls",
+        "data/Ti_BP_Position_Run3_04_26_2025.xls",
+        "data/Ti_BP_Position_Run4_04_26_2025.xls",
+        "data/Ti_BP_Position_Run5_04_26_2025.xls",
+    ]
 
     diff_X1 = []
     diff_Y1 = []
@@ -424,8 +433,8 @@ def compareBPFiducials():
         hex1, hex2, fids_TFBF = extractBPFiducials(
             file, output_name=f"plots/BP_{idx}.png", ToGantry=ToGantry)
 
-        # hex1 = hex1.Align(fids_TFBF_new)
-        # hex2 = hex2.Align(fids_TFBF_new)
+        hex1 = hex1.Align(fids_TFBF_new)
+        hex2 = hex2.Align(fids_TFBF_new)
 
         results = fit_hexagon_with_radius_constraint(
             hex1, target_radius)
@@ -444,8 +453,8 @@ def compareBPFiducials():
             hex2.fitted_hexagon['center'], hex2.fitted_hexagon['radius'], hex2.fitted_hexagon['theta'], True)
         print("Angle 1:", angle1[0])
         print("Angle 2:", angle2[0])
-        tray = tray_org.Align(fids_TFBF)
-        # tray = tray_org.Align(fids_TFBF_new)
+        # tray = tray_org.Align(fids_TFBF)
+        tray = tray_org.Align(fids_TFBF_new)
         tray.visualize(f"plots/TrayFiducial_{idx}_aligned.png")
         print("Tray center pos1 :", tray.GetCenter(1))
         print("Tray angle pos1 :", tray.GetAngle(1))
