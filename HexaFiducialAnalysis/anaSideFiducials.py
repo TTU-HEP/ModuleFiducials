@@ -1,4 +1,4 @@
-from modules.components import HexaEdgeFiducials, Fiducial, fit_hexagon_with_radius_constraint, plot_fitted_hexagon, AssemblyTrayFiducials, find_angle_to_rightmost_side_midpoint
+from modules.components import HexaEdgeFiducials, HexaFiducials, Fiducial, fit_hexagon_with_radius_constraint, plot_fitted_hexagon, AssemblyTrayFiducials, find_angle_to_rightmost_side_midpoint
 import pandas as pd
 import sys
 import numpy as np
@@ -6,11 +6,77 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 
 
-def extractHexaFiducials(file_name, sheet_name='WorkSheet_01', output_name='HexaFiducial.png', ToGantry=False):
+def extractHexaSideFiducials(file_name, sheet_name='WorkSheet_01', output_name='HexaFiducial.png', ToGantry=False, doSilicon=False):
     xls = pd.ExcelFile(file_name)
     df = pd.read_excel(xls, sheet_name=sheet_name)
     col_name = 'Unnamed: 6'
 
+    # extra TF and BF fiducials for alignment
+    if not doSilicon:
+        tf_idx = 141
+        bf_idx = 157
+    else:
+        tf_idx = 15
+        bf_idx = 31
+    TFX = float(df[col_name][tf_idx])
+    TFY = float(df[col_name][tf_idx + 1])
+    TF = Fiducial(TFX, TFY)
+    BFX = float(df[col_name][bf_idx])
+    BFY = float(df[col_name][bf_idx + 1])
+    BF = Fiducial(BFX, BFY)
+    fids_TFBF = {
+        'TF': TF,
+        'BF': BF
+    }
+    if ToGantry:
+        fids_TFBF['TF'] = TF.FlipY()
+        fids_TFBF['BF'] = BF.FlipY()
+
+    fiducials_pos1 = []
+    if not doSilicon:
+        pos1_indices = [8, 14, 20, 26, 32, 38, 44, 50, 56, 62, 68]
+        pos2_indices = [74, 80, 86, 92, 98, 104, 110, 116, 122, 128, 134]
+    else:
+        pos1_indices = [8, 38, 44, 50, 56, 62, 68, 74, 80,
+                        86, 92, 98, 104, 110, 116, 122, 128, 134, 140]
+        pos2_indices = [146, 152, 158, 164, 170, 176, 182, 188, 194, 200, 206]
+
+    # pos 1
+    for idx in pos1_indices:
+        fidX = float(df[col_name][idx])
+        fidY = float(df[col_name][idx + 1])
+        fid = Fiducial(fidX, fidY)
+        fiducials_pos1.append(fid)
+
+    fiducials_pos1_hexaboard = HexaEdgeFiducials(
+        fiducials_pos1, TF=TF, BF=BF)
+    fiducials_pos1_hexaboard.visualize(output_name=output_name.replace(
+        ".png", "_pos1.png"))
+    if ToGantry:
+        fiducials_pos1_hexaboard.ToGantry()
+
+    # pos 2
+    fiducials_pos2 = []
+    for idx in pos2_indices:
+        fidX = float(df[col_name][idx])
+        fidY = float(df[col_name][idx + 1])
+        fid = Fiducial(fidX, fidY)
+        fiducials_pos2.append(fid)
+
+    fiducials_pos2_hexaboard = HexaEdgeFiducials(
+        fiducials_pos2, TF=TF, BF=BF)
+    fiducials_pos2_hexaboard.visualize(output_name=output_name.replace(
+        ".png", "_pos2.png"))
+    if ToGantry:
+        fiducials_pos2_hexaboard.ToGantry()
+
+    return fiducials_pos1_hexaboard, fiducials_pos2_hexaboard, fids_TFBF
+
+
+def extractHexaFiducials(file_name, sheet_name='WorkSheet_01', output_name='HexaFiducial.png', ToGantry=False):
+    xls = pd.ExcelFile(file_name)
+    df = pd.read_excel(xls, sheet_name=sheet_name)
+    col_name = 'Unnamed: 6'
     # extra TF and BF fiducials for alignment
     TFX = float(df[col_name][141])
     TFY = float(df[col_name][142])
@@ -33,13 +99,28 @@ def extractHexaFiducials(file_name, sheet_name='WorkSheet_01', output_name='Hexa
         fidY = float(df[col_name][idx + 1])
         fid = Fiducial(fidX, fidY)
         fiducials_pos1.append(fid)
-
     fiducials_pos1_hexaboard = HexaEdgeFiducials(
         fiducials_pos1, TF=TF, BF=BF)
-    fiducials_pos1_hexaboard.visualize(output_name=output_name.replace(
-        ".png", "_pos1.png"))
-    if ToGantry:
-        fiducials_pos1_hexaboard.ToGantry()
+
+    # six fiducials
+    map_fids_idx_pos1 = {
+        "FD1": 165,
+        "FD2": 172,
+        "FD3": 179,
+        "FD4": 186,
+        "FD5": 193,
+        "FD6": 200
+    }
+    fids = {}
+    for fid_name, idx in map_fids_idx_pos1.items():
+        fidX = float(df[col_name][idx])
+        fidY = float(df[col_name][idx + 1])
+        fid = Fiducial(fidX, fidY)
+        fids[fid_name] = fid
+    fiducials_pos1_hexaboard_6Fid = HexaFiducials(
+        fids, TF=TF, BF=BF)
+    fiducials_pos1_hexaboard_6Fid.visualize(output_name=output_name.replace(
+        ".png", "_pos1_6Fid.png"))
 
     # pos 2
     fiducials_pos2 = []
@@ -48,15 +129,65 @@ def extractHexaFiducials(file_name, sheet_name='WorkSheet_01', output_name='Hexa
         fidY = float(df[col_name][idx + 1])
         fid = Fiducial(fidX, fidY)
         fiducials_pos2.append(fid)
-
     fiducials_pos2_hexaboard = HexaEdgeFiducials(
         fiducials_pos2, TF=TF, BF=BF)
     fiducials_pos2_hexaboard.visualize(output_name=output_name.replace(
         ".png", "_pos2.png"))
-    if ToGantry:
-        fiducials_pos2_hexaboard.ToGantry()
 
-    return fiducials_pos1_hexaboard, fiducials_pos2_hexaboard, fids_TFBF
+    # six fiducials
+    map_fids_idx_pos2 = {
+        "FD1": 207,
+        "FD2": 214,
+        "FD3": 221,
+        "FD4": 228,
+        "FD5": 235,
+        "FD6": 242
+    }
+    fids = {}
+    for fid_name, idx in map_fids_idx_pos2.items():
+        fidX = float(df[col_name][idx])
+        fidY = float(df[col_name][idx + 1])
+        fid = Fiducial(fidX, fidY)
+        fids[fid_name] = fid
+    fiducials_pos2_hexaboard_6Fid = HexaFiducials(
+        fids, TF=TF, BF=BF)
+    fiducials_pos2_hexaboard_6Fid.visualize(output_name=output_name.replace(
+        ".png", "_pos2_6Fid.png"))
+    if ToGantry:
+        fiducials_pos1_hexaboard.ToGantry()
+        fiducials_pos2_hexaboard.ToGantry()
+        fiducials_pos1_hexaboard_6Fid.ToGantry()
+        fiducials_pos2_hexaboard_6Fid.ToGantry()
+
+    if 1:
+        # make plots of the fiducials
+        fig, ax = plt.subplots()
+        for fid in fiducials_pos1_hexaboard.fiducials:
+            ax.plot(fid.X, fid.Y, 'ro')
+        for name, fid in fiducials_pos1_hexaboard_6Fid.fiducials.items():
+            ax.plot(fid.X, fid.Y, 'bo')
+            ax.text(fid.X, fid.Y, name, fontsize=12)
+        ax.set_title("Fiducials pos1")
+        ax.set_xlabel("X")
+        ax.set_ylabel("Y")
+        ax.set_aspect('equal')
+        plt.savefig(output_name.replace(
+            ".png", "_pos1_fiducials_comp.png"), dpi=300)
+        plt.close()
+        fig, ax = plt.subplots()
+        for fid in fiducials_pos2_hexaboard.fiducials:
+            ax.plot(fid.X, fid.Y, 'ro')
+        for name, fid in fiducials_pos2_hexaboard_6Fid.fiducials.items():
+            ax.plot(fid.X, fid.Y, 'bo')
+            ax.text(fid.X, fid.Y, name, fontsize=12)
+        ax.set_title("Fiducials pos2")
+        ax.set_xlabel("X")
+        ax.set_ylabel("Y")
+        ax.set_aspect('equal')
+        plt.savefig(output_name.replace(
+            ".png", "_pos2_fiducials_comp.png"), dpi=300)
+        plt.close()
+    return fiducials_pos1_hexaboard, fiducials_pos2_hexaboard, fids_TFBF, fiducials_pos1_hexaboard_6Fid, fiducials_pos2_hexaboard_6Fid
 
 
 def extractBPFiducials(file_name, sheet_name='WorkSheet_01', output_name='BPFiducial.png', ToGantry=False):
@@ -275,18 +406,23 @@ def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparis
     plt.close()
 
 
-def compareHexaFiducials():
-    files = [
-        "data/Hex_Position_wPUT_DryRun1.xls",
-        "data/Hex_Position_wPUT_DryRun2.xls",
-        "data/Hex_Position_wPUT_DryRun1_04_24_2025.xls",
-        "data/Hex_Position_wPUT_DryRun2_04_24_2025.xls",
-        "data/Hex_Position_wPUT_DryRun3_04_24_2025.xls",
-        "data/Hex_Position_wPUT_DryRun1_afterchanges_04_24_2025.xls",
-        "data/Hex_Position_wPUT_DryRun2_afterchanges_04_24_2025.xls",
-        "data/Hex_Position_wPUT_DryRun1_afterchanges_04_25_2025.xls",
-        "data/Hex_Position_wPUT_DryRun2_afterchanges_04_25_2025.xls"
-    ]
+def compareHexaFiducials(doSilicon=False):
+    if not doSilicon:
+        files = [
+            "data/Hex_Position_wPUT_DryRun1.xls",
+            "data/Hex_Position_wPUT_DryRun2.xls",
+            "data/Hex_Position_wPUT_DryRun1_04_24_2025.xls",
+            "data/Hex_Position_wPUT_DryRun2_04_24_2025.xls",
+            "data/Hex_Position_wPUT_DryRun3_04_24_2025.xls",
+            "data/Hex_Position_wPUT_DryRun1_afterchanges_04_24_2025.xls",
+            "data/Hex_Position_wPUT_DryRun2_afterchanges_04_24_2025.xls",
+            "data/Hex_Position_wPUT_DryRun1_afterchanges_04_25_2025.xls",
+            "data/Hex_Position_wPUT_DryRun2_afterchanges_04_25_2025.xls"
+        ]
+    else:
+        files = [
+            "data/Si_wPUT_DryRun1_04-26-2025.xls",
+        ]
 
     diff_X1 = []
     diff_Y1 = []
@@ -301,7 +437,10 @@ def compareHexaFiducials():
     recos_2 = []
 
     ToGantry = False
-    target_radius = 96.05
+    if not doSilicon:
+        target_radius = 96.05
+    else:
+        target_radius = 96.175
 
     TF_new = Fiducial(141.981122, -700.740873)
     BF_new = Fiducial(122.303276, -1092.058439)
@@ -314,8 +453,8 @@ def compareHexaFiducials():
         tray_org = extractTrayFiducials(
             "plots/TrayFiducial.png", ToGantry=ToGantry)
         print(f"Processing {file}")
-        hex1, hex2, fids_TFBF = extractHexaFiducials(
-            file, output_name=f"plots/test_{idx}.png", ToGantry=ToGantry)
+        hex1, hex2, fids_TFBF = extractHexaSideFiducials(
+            file, output_name=f"plots/test_{idx}.png", ToGantry=ToGantry, doSilicon=doSilicon)
 
         hex1 = hex1.Align(fids_TFBF_new)
         hex2 = hex2.Align(fids_TFBF_new)
@@ -383,6 +522,67 @@ def compareHexaFiducials():
                         output_name="plots/hexagon_comparison_pos1.png")
     plot_truth_vs_recos(truths_2[0], recos_2, line_length=0.5,
                         output_name="plots/hexagon_comparison_pos2.png")
+    plot_truth_vs_recos_2plots(truths_1[0], recos_1,
+                               output_name="plots/hexagon_comparison_pos1_2plots.png")
+    plot_truth_vs_recos_2plots(truths_2[0], recos_2,
+                               output_name="plots/hexagon_comparison_pos2_2plots.png")
+
+
+def checkHexaFiducials():
+    """
+    compare the results using different methods of the fiducial measurements:
+    1. four fiducials
+    2. two fiducials
+    3. three sides
+    """
+    files = [
+        "data/Hex_Position_Edges_and_Fiducials_Run1_04_26_2025.xls",
+        "data/Hex_Position_Edges_and_Fiducials_Run2_04_26_2025.xls",
+        "data/Hex_Position_Edges_and_Fiducials_Run3_04_26_2025.xls",
+    ]
+
+    target_radius = 96.05
+
+    for idx, file in enumerate(files):
+        hex1, hex2, fids_TFBF, hex1_6Fids, hex2_6Fids = extractHexaFiducials(
+            file, output_name=f"plots/test_{idx}.png", ToGantry=False)
+
+        results = fit_hexagon_with_radius_constraint(
+            hex1, target_radius)
+        plot_fitted_hexagon(
+            results, f"plots/test_{idx}_fitted_hexagon_pos1.png")
+        hex1.fitted_hexagon = results
+        results = fit_hexagon_with_radius_constraint(
+            hex2, target_radius)
+        plot_fitted_hexagon(
+            results, f"plots/test_{idx}_fitted_hexagon_pos2.png")
+        hex2.fitted_hexagon = results
+
+        angle1 = find_angle_to_rightmost_side_midpoint(
+            hex1.fitted_hexagon['center'], hex1.fitted_hexagon['radius'], hex1.fitted_hexagon['theta'], False)
+        angle2 = find_angle_to_rightmost_side_midpoint(
+            hex2.fitted_hexagon['center'], hex2.fitted_hexagon['radius'], hex2.fitted_hexagon['theta'], True)
+
+        print("\n\n********")
+        print("Pos1: fitted hexagon center:", hex1.fitted_hexagon["center"])
+        print("Pos1: fitted hexagon angle:", angle1[0])
+        print("Pos1, center with 4 fiducials:", hex1_6Fids.GetCenter())
+        print("Pos1, angle with 4 fiducials:", hex1_6Fids.GetAngle())
+        print("Pos1, center with 2 fiducials:",
+              hex1_6Fids.GetCenter(use4FDs=False))
+        print("Pos1, angle with 2 fiducials:",
+              hex1_6Fids.GetAngle(use4FDs=False))
+
+        print("Pos2: fitted hexagon center:", hex2.fitted_hexagon["center"])
+        print("Pos2: fitted hexagon angle:", angle2[0])
+        print("Pos2, center with 4 fiducials:", hex2_6Fids.GetCenter())
+        print("Pos2, angle with 4 fiducials:", hex2_6Fids.GetAngle())
+        print("Pos2, center with 2 fiducials:",
+              hex2_6Fids.GetCenter(use4FDs=False))
+        print("Pos2, angle with 2 fiducials:",
+              hex2_6Fids.GetAngle(use4FDs=False))
+
+    return
 
 
 def compareBPFiducials():
@@ -402,6 +602,9 @@ def compareBPFiducials():
         "data/Ti_BP_Position_Run3_04_26_2025.xls",
         "data/Ti_BP_Position_Run4_04_26_2025.xls",
         "data/Ti_BP_Position_Run5_04_26_2025.xls",
+    ]
+    files = [
+        "data/CuW_BP_Position_83P1_112P2_04_26_2025.xls"
     ]
 
     diff_X1 = []
@@ -502,5 +705,6 @@ def compareBPFiducials():
 
 
 if __name__ == "__main__":
-    # compareHexaFiducials()
+    # compareHexaFiducials(doSilicon=True)
     compareBPFiducials()
+    # checkHexaFiducials()

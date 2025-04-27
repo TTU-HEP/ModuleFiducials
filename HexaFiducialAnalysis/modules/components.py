@@ -183,6 +183,135 @@ class AssemblyTrayFiducials(object):
         return AssemblyTrayFiducials(fids_new)
 
 
+class HexaFiducials(object):
+    """
+    Use the four fiducials to define the center and angle of the hexagon 
+    (FD1, FD2, FD4, FD5)
+    or the two fiducials (FD3, FD6)
+    """
+
+    def __init__(self, fiducials: dict, isOGP=True, TF=None, BF=None):
+        for fiducial in fiducials.values():
+            assert isinstance(fiducial, Fiducial), \
+                "All fiducials must be instances of the Fiducial class"
+        self.fiducials = fiducials
+        self.TF = TF
+        self.BF = BF
+        self.isOGP = isOGP
+
+    def __str__(self):
+        return f"HexaFiducials({self.fiducials})"
+
+    def __repr__(self):
+        return self.__str__()
+
+    def IsOGPCoord(self):
+        # Gantry and OGP have opposite y directions
+        # OGP is the default
+        return self.isOGP
+
+    def IsGantryCoord(self):
+        return not self.isOGP
+
+    def ToGantry(self):
+        if self.IsOGPCoord():
+            print("Converting to Gantry coordinates")
+            fiducials_new = self.fiducials.copy()
+            for name, fid in self.fiducials.items():
+                fiducials_new[name] = fid.FlipY()
+            self.fiducials = fiducials_new
+            self.isOGP = False
+        return self
+
+    def ToOGP(self):
+        if self.IsGantryCoord():
+            print("Converting to OGP coordinates")
+            fiducials_new = self.fiducials.copy()
+            for name, fid in self.fiducials.items():
+                fiducials_new[name] = fid.FlipY()
+            self.isOGP = True
+        return self
+
+    def Align(self, fids_TF_BF, base="BF"):
+        fids_TF_BF_current = {}
+        fids_TF_BF_current['TF'] = self.TF
+        fids_TF_BF_current['BF'] = self.BF
+        fids_new = self.fiducials.copy()
+        for name, fiducial in self.fiducials.items():
+            fids_new[name] = AlignTFBF(
+                fiducial, fids_TF_BF_current, fids_TF_BF, base=base)
+        return HexaEdgeFiducials(fids_new, isOGP=self.isOGP, TF=fids_TF_BF['TF'], BF=fids_TF_BF['BF'])
+
+    def XYPoints(self):
+        return np.array([fiducial.XY() for fiducial in self.fiducials.values()])
+
+    def GetCenter(self, use4FDs=True):
+        if use4FDs:
+            for fd in ["FD1", "FD2", "FD4", "FD5"]:
+                assert fd in self.fiducials, f"{fd} not in fiducials"
+
+            x1, y1 = self.fiducials["FD1"].XY()
+            x2, y2 = self.fiducials["FD2"].XY()
+            x4, y4 = self.fiducials["FD4"].XY()
+            x5, y5 = self.fiducials["FD5"].XY()
+            x = (x1 + x2 + x4 + x5) / 4
+            y = (y1 + y2 + y4 + y5) / 4
+        else:
+            for fd in ["FD3", "FD6"]:
+                assert fd in self.fiducials, f"{fd} not in fiducials"
+            x3, y3 = self.fiducials["FD3"].XY()
+            x6, y6 = self.fiducials["FD6"].XY()
+            x = (x3 + x6) / 2
+            y = (y3 + y6) / 2
+        return x, y
+
+    def GetAngle(self, use4FDs=True):
+        if use4FDs:
+            for fd in ["FD1", "FD2", "FD4", "FD5"]:
+                assert fd in self.fiducials, f"{fd} not in fiducials"
+            avg12X = (self.fiducials["FD1"].GetX() +
+                      self.fiducials["FD2"].GetX()) / 2
+            avg12Y = (self.fiducials["FD1"].GetY() +
+                      self.fiducials["FD2"].GetY()) / 2
+            avg45X = (self.fiducials["FD4"].GetX() +
+                      self.fiducials["FD5"].GetX()) / 2
+            avg45Y = (self.fiducials["FD4"].GetY() +
+                      self.fiducials["FD5"].GetY()) / 2
+            # Calculate the angle between the two average points
+            angle = Angle(avg12X, avg12Y, avg45X, avg45Y)
+            return angle
+        else:
+            for fd in ["FD3", "FD6"]:
+                assert fd in self.fiducials, f"{fd} not in fiducials"
+            x3, y3 = self.fiducials["FD3"].XY()
+            x6, y6 = self.fiducials["FD6"].XY()
+            angle = Angle(x3, y3, x6, y6) + 90.0
+            return angle
+
+    def visualize(self, output_name, includeTFBF=False):
+        plt.figure(figsize=(8, 8))
+        for name, fiducial in self.fiducials.items():
+            x, y = fiducial.XY()
+            plt.scatter(x, y, label=name)
+
+        if includeTFBF:
+            if self.TF is not None:
+                x, y = self.TF.XY()
+                plt.scatter(x, y, color='red', label='TF')
+            if self.BF is not None:
+                x, y = self.BF.XY()
+                plt.scatter(x, y, color='blue', label='BF')
+            plt.legend()
+        plt.xlabel("X [mm]")
+        plt.ylabel("Y [mm]")
+        plt.title("Hexa Fiducials")
+        plt.grid(True)
+        plt.axis('equal')
+        plt.savefig(output_name)
+        plt.close()
+        return
+
+
 class HexaEdgeFiducials(object):
     def __init__(self, fiducials, isOGP=True, TF=None, BF=None):
         for fiducial in fiducials:
