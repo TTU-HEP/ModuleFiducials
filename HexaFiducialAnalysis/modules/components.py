@@ -240,7 +240,7 @@ class HexaFiducials(object):
         for name, fiducial in self.fiducials.items():
             fids_new[name] = AlignTFBF(
                 fiducial, fids_TF_BF_current, fids_TF_BF, base=base)
-        return HexaEdgeFiducials(fids_new, isOGP=self.isOGP, TF=fids_TF_BF['TF'], BF=fids_TF_BF['BF'])
+        return HexaFiducials(fids_new, isOGP=self.isOGP, TF=fids_TF_BF['TF'], BF=fids_TF_BF['BF'])
 
     def XYPoints(self):
         return np.array([fiducial.XY() for fiducial in self.fiducials.values()])
@@ -278,14 +278,14 @@ class HexaFiducials(object):
             avg45Y = (self.fiducials["FD4"].GetY() +
                       self.fiducials["FD5"].GetY()) / 2
             # Calculate the angle between the two average points
-            angle = Angle(avg12X, avg12Y, avg45X, avg45Y)
+            angle = Angle(avg12X, avg12Y, avg45X, avg45Y) + 180.0
             return angle
         else:
             for fd in ["FD3", "FD6"]:
                 assert fd in self.fiducials, f"{fd} not in fiducials"
             x3, y3 = self.fiducials["FD3"].XY()
             x6, y6 = self.fiducials["FD6"].XY()
-            angle = Angle(x3, y3, x6, y6) + 90.0
+            angle = Angle(x3, y3, x6, y6) - 90.0
             return angle
 
     def visualize(self, output_name, includeTFBF=False):
@@ -305,6 +305,118 @@ class HexaFiducials(object):
         plt.xlabel("X [mm]")
         plt.ylabel("Y [mm]")
         plt.title("Hexa Fiducials")
+        plt.grid(True)
+        plt.axis('equal')
+        plt.savefig(output_name)
+        plt.close()
+        return
+
+
+class SiliconFiducials(object):
+    """
+    Use the four fiducials to define the center and angle of the hexagon 
+    (FD1, FD2, FD3, FD4)
+    """
+
+    def __init__(self, fiducials: dict, isOGP=True, TF=None, BF=None):
+        for fiducial in fiducials.values():
+            assert isinstance(fiducial, Fiducial), \
+                "All fiducials must be instances of the Fiducial class"
+        self.fiducials = fiducials
+        self.TF = TF
+        self.BF = BF
+        self.isOGP = isOGP
+
+    def __str__(self):
+        return f"SiliconFiducials({self.fiducials})"
+
+    def __repr__(self):
+        return self.__str__()
+
+    def IsOGPCoord(self):
+        # Gantry and OGP have opposite y directions
+        # OGP is the default
+        return self.isOGP
+
+    def IsGantryCoord(self):
+        return not self.isOGP
+
+    def ToGantry(self):
+        if self.IsOGPCoord():
+            print("Converting to Gantry coordinates")
+            fiducials_new = self.fiducials.copy()
+            for name, fid in self.fiducials.items():
+                fiducials_new[name] = fid.FlipY()
+            self.fiducials = fiducials_new
+            self.isOGP = False
+        return self
+
+    def ToOGP(self):
+        if self.IsGantryCoord():
+            print("Converting to OGP coordinates")
+            fiducials_new = self.fiducials.copy()
+            for name, fid in self.fiducials.items():
+                fiducials_new[name] = fid.FlipY()
+            self.isOGP = True
+        return self
+
+    def Align(self, fids_TF_BF, base="BF"):
+        fids_TF_BF_current = {}
+        fids_TF_BF_current['TF'] = self.TF
+        fids_TF_BF_current['BF'] = self.BF
+        fids_new = self.fiducials.copy()
+        for name, fiducial in self.fiducials.items():
+            fids_new[name] = AlignTFBF(
+                fiducial, fids_TF_BF_current, fids_TF_BF, base=base)
+        return HexaFiducials(fids_new, isOGP=self.isOGP, TF=fids_TF_BF['TF'], BF=fids_TF_BF['BF'])
+
+    def XYPoints(self):
+        return np.array([fiducial.XY() for fiducial in self.fiducials.values()])
+
+    def GetCenter(self):
+        for fd in ["FD1", "FD2", "FD3", "FD4"]:
+            assert fd in self.fiducials, f"{fd} not in fiducials"
+
+        x1, y1 = self.fiducials["FD1"].XY()
+        x2, y2 = self.fiducials["FD2"].XY()
+        x4, y4 = self.fiducials["FD3"].XY()
+        x5, y5 = self.fiducials["FD4"].XY()
+        x = (x1 + x2 + x4 + x5) / 4
+        y = (y1 + y2 + y4 + y5) / 4
+        return x, y
+
+    def GetAngle(self):
+        for fd in ["FD1", "FD2", "FD3", "FD4"]:
+            assert fd in self.fiducials, f"{fd} not in fiducials"
+        avg12X = (self.fiducials["FD1"].GetX() +
+                  self.fiducials["FD2"].GetX()) / 2
+        avg12Y = (self.fiducials["FD1"].GetY() +
+                  self.fiducials["FD2"].GetY()) / 2
+        avg34X = (self.fiducials["FD3"].GetX() +
+                  self.fiducials["FD4"].GetX()) / 2
+        avg34Y = (self.fiducials["FD3"].GetY() +
+                  self.fiducials["FD4"].GetY()) / 2
+        # Calculate the angle between the two average points
+        angle = Angle(avg12X, avg12Y, avg34X, avg34Y) - 90.0
+        return angle
+
+    def visualize(self, output_name, includeTFBF=False):
+        plt.figure(figsize=(8, 8))
+        for name, fiducial in self.fiducials.items():
+            x, y = fiducial.XY()
+            plt.scatter(x, y, label=name)
+
+        if includeTFBF:
+            if self.TF is not None:
+                x, y = self.TF.XY()
+                plt.scatter(x, y, color='red', label='TF')
+            if self.BF is not None:
+                x, y = self.BF.XY()
+                plt.scatter(x, y, color='blue', label='BF')
+            plt.legend()
+        plt.xlabel("X [mm]")
+        plt.ylabel("Y [mm]")
+        plt.title("Silicon Fiducials")
         plt.grid(True)
         plt.axis('equal')
         plt.savefig(output_name)

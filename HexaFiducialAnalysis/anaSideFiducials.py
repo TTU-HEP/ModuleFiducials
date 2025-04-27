@@ -1,9 +1,49 @@
-from modules.components import HexaEdgeFiducials, HexaFiducials, Fiducial, fit_hexagon_with_radius_constraint, plot_fitted_hexagon, AssemblyTrayFiducials, find_angle_to_rightmost_side_midpoint
+from modules.components import HexaEdgeFiducials, HexaFiducials, Fiducial, fit_hexagon_with_radius_constraint, plot_fitted_hexagon, AssemblyTrayFiducials, find_angle_to_rightmost_side_midpoint, SiliconFiducials
 import pandas as pd
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
+
+
+def extractProtoModuleFiducials(file_name, sheet_name='WorkSheet_01', output_name='ProtoModuleFiducial.png', ToGantry=False):
+    xls = pd.ExcelFile(file_name)
+    df = pd.read_excel(xls, sheet_name=sheet_name)
+    col_name = 'Unnamed: 6'
+    # extra TF and BF fiducials for alignment
+    TFX = 0.0
+    TFY = 0.0
+    TF = Fiducial(TFX, TFY)
+    BFX = float(df[col_name][19])
+    BFY = float(df[col_name][20])
+    BF = Fiducial(BFX, BFY)
+    fids_TFBF = {
+        'TF': TF,
+        'BF': BF
+    }
+    if ToGantry:
+        fids_TFBF['TF'] = TF.FlipY()
+        fids_TFBF['BF'] = BF.FlipY()
+    # pos 1
+    map_fids_idx_pos = {
+        "FD1": 24,
+        "FD2": 30,
+        "FD3": 36,
+        "FD4": 42,
+    }
+    fids = {}
+    for fid_name, idx in map_fids_idx_pos.items():
+        fidX = float(df[col_name][idx])
+        fidY = float(df[col_name][idx + 1])
+        fid = Fiducial(fidX, fidY)
+        fids[fid_name] = fid
+    fiducials_pos1 = SiliconFiducials(
+        fids, TF=TF, BF=BF)
+    fiducials_pos1.visualize(output_name=output_name.replace(
+        ".png", "_pos1.png"))
+    if ToGantry:
+        fiducials_pos1.ToGantry()
+    return fiducials_pos1, fids_TFBF
 
 
 def extractHexaSideFiducials(file_name, sheet_name='WorkSheet_01', output_name='HexaFiducial.png', ToGantry=False, doSilicon=False):
@@ -306,7 +346,7 @@ def plot_truth_vs_recos(truth, recos, line_length=20, output_name="plots/hexagon
     plt.savefig(output_name)
 
 
-def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparison.png"):
+def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparison.png", useOddEven=False):
     tx, ty, t_angle = truth
     t_angle_rad = np.radians(t_angle)
 
@@ -321,12 +361,18 @@ def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparis
                     edgecolors='black', label='Truth Point')
 
     for i, (rx, ry, _) in enumerate(recos):
-        if i >= 8:
-            col = colors[2]
-        elif i >= 5:
-            col = colors[1]
+        if not useOddEven:
+            if i >= 8:
+                col = colors[2]
+            elif i >= 5:
+                col = colors[1]
+            else:
+                col = colors[0]
         else:
-            col = colors[0]
+            if i % 2 == 0:
+                col = colors[0]
+            else:
+                col = colors[1]
         ax_main.scatter(rx, ry, color=col, marker='^', s=100,
                         edgecolors='black', label=f'Reco #{i}' if i == 0 else None)
 
@@ -341,7 +387,7 @@ def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparis
     origin_x = 0
     origin_y = 0
 
-    if t_angle_rad > np.pi/2.0:
+    if t_angle_rad > np.pi/2.0 or t_angle_rad < -np.pi/2.0:
         t_angle_rad_approx = np.radians(180.0)
         doLeft = True
     else:
@@ -358,12 +404,18 @@ def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparis
     y_vals = []
     for i, (_, _, r_angle) in enumerate(recos):
         r_angle_rad = np.radians(r_angle)
-        if i >= 8:
-            col = colors[2]
-        elif i >= 5:
-            col = colors[1]
+        if not useOddEven:
+            if i >= 8:
+                col = colors[2]
+            elif i >= 5:
+                col = colors[1]
+            else:
+                col = colors[0]
         else:
-            col = colors[0]
+            if i % 2 == 0:
+                col = colors[0]
+            else:
+                col = colors[1]
 
         r_angle_rad_diff = r_angle_rad - t_angle_rad + t_angle_rad_approx
         ax_angle.quiver(origin_x, origin_y, np.cos(r_angle_rad_diff),
@@ -394,6 +446,8 @@ def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparis
     ax_angle.add_patch(cone)
 
     ax_angle.set_ylim(-0.0001, 0.0001)
+    # ax_angle.set_ylim(-0.0011, 0.0011)
+    # ax_angle.set_xlim(-0.11, 0.11)
     if doLeft:
         ax_angle.set_xlim(-0.11, 0.)
     else:
@@ -443,7 +497,9 @@ def compareHexaFiducials(doSilicon=False):
         target_radius = 96.175
 
     TF_new = Fiducial(141.981122, -700.740873)
+    TF_new = Fiducial(139.340, -699.570)
     BF_new = Fiducial(122.303276, -1092.058439)
+    BF_new = Fiducial(123.390, -1091.704)
     fids_TFBF_new = {
         'TF': TF_new,
         'BF': BF_new
@@ -543,9 +599,29 @@ def checkHexaFiducials():
 
     target_radius = 96.05
 
+    truths_1 = []
+    recos_1 = []
+    truths_2 = []
+    recos_2 = []
+
+    TF_new = Fiducial(141.981122, -700.740873)
+    TF_new = Fiducial(139.340, -699.570)
+    BF_new = Fiducial(122.303276, -1092.058439)
+    BF_new = Fiducial(123.390, -1091.704)
+    fids_TFBF_new = {
+        'TF': TF_new,
+        'BF': BF_new
+    }
+
     for idx, file in enumerate(files):
         hex1, hex2, fids_TFBF, hex1_6Fids, hex2_6Fids = extractHexaFiducials(
             file, output_name=f"plots/test_{idx}.png", ToGantry=False)
+
+        hex1 = hex1.Align(fids_TFBF_new)
+        hex2 = hex2.Align(fids_TFBF_new)
+
+        hex1_6Fids = hex1_6Fids.Align(fids_TFBF_new)
+        hex2_6Fids = hex2_6Fids.Align(fids_TFBF_new)
 
         results = fit_hexagon_with_radius_constraint(
             hex1, target_radius)
@@ -562,6 +638,33 @@ def checkHexaFiducials():
             hex1.fitted_hexagon['center'], hex1.fitted_hexagon['radius'], hex1.fitted_hexagon['theta'], False)
         angle2 = find_angle_to_rightmost_side_midpoint(
             hex2.fitted_hexagon['center'], hex2.fitted_hexagon['radius'], hex2.fitted_hexagon['theta'], True)
+
+        if idx == 0:
+            truth_1_base = [hex1_6Fids.GetCenter()[0], hex1_6Fids.GetCenter()[
+                1], hex1_6Fids.GetAngle()]
+            truth_2_base = [hex2_6Fids.GetCenter()[0], hex2_6Fids.GetCenter()[
+                1], hex2_6Fids.GetAngle()]
+
+        truth = [hex1_6Fids.GetCenter()[0],
+                 hex1_6Fids.GetCenter()[1], hex1_6Fids.GetAngle()]
+        truth_diff = [truth[0] - truth_1_base[0], truth[1] -
+                      truth_1_base[1], truth[2] - truth_1_base[2]]
+
+        truths_1.append(truth)
+        recos_1.append([hex1.fitted_hexagon["center"][0] - truth_diff[0],
+                       hex1.fitted_hexagon["center"][1] - truth_diff[1], angle1[0] - truth_diff[2]])
+        recos_1.append([hex1_6Fids.GetCenter(use4FDs=False)[0] - truth_diff[0],
+                       hex1_6Fids.GetCenter(use4FDs=False)[1] - truth_diff[1], hex1_6Fids.GetAngle(use4FDs=False) - truth_diff[2]])
+
+        truth = [hex2_6Fids.GetCenter()[0],
+                 hex2_6Fids.GetCenter()[1], hex2_6Fids.GetAngle()]
+        truth_diff = [truth[0] - truth_2_base[0], truth[1] -
+                      truth_2_base[1], truth[2] - truth_2_base[2]]
+        truths_2.append(truth)
+        recos_2.append([hex2.fitted_hexagon["center"][0] - truth_diff[0],
+                        hex2.fitted_hexagon["center"][1] - truth_diff[1], angle2[0] - truth_diff[2]])
+        recos_2.append([hex2_6Fids.GetCenter(use4FDs=False)[0] - truth_diff[0],
+                        hex2_6Fids.GetCenter(use4FDs=False)[1] - truth_diff[1], hex2_6Fids.GetAngle(use4FDs=False) - truth_diff[2]])
 
         print("\n\n********")
         print("Pos1: fitted hexagon center:", hex1.fitted_hexagon["center"])
@@ -581,6 +684,15 @@ def checkHexaFiducials():
               hex2_6Fids.GetCenter(use4FDs=False))
         print("Pos2, angle with 2 fiducials:",
               hex2_6Fids.GetAngle(use4FDs=False))
+
+    plot_truth_vs_recos(truths_1[0], recos_1, line_length=0.2,
+                        output_name="plots/Hexa_Fid_comparison_pos1.png")
+    plot_truth_vs_recos(truths_2[0], recos_2, line_length=0.2,
+                        output_name="plots/Hexa_Fid_comparison_pos2.png")
+    plot_truth_vs_recos_2plots(truths_1[0], recos_1,
+                               output_name="plots/Hexa_Fid_comparison_pos1_2plots.png", useOddEven=True)
+    plot_truth_vs_recos_2plots(truths_2[0], recos_2,
+                               output_name="plots/Hexa_Fid_comparison_pos2_2plots.png", useOddEven=True)
 
     return
 
@@ -704,7 +816,50 @@ def compareBPFiducials():
                                output_name="plots/BP_comparison_pos2_2plots.png")
 
 
+def checkProtoModuleFiducials():
+    files = [
+        ["pos1", "data/MLF3W2TT0116.xls"],
+        ["pos2", "data/MLF3W2TT0117.xls"],
+    ]
+
+    truths_1 = []
+    recos_1 = []
+    truths_2 = []
+    recos_2 = []
+    for idx, (pos, file) in enumerate(files):
+        tray_org = extractTrayFiducials(
+            "plots/TrayFiducial.png", ToGantry=False)
+        print(f"Processing {file}")
+
+        silicon, fids_TFBF = extractProtoModuleFiducials(
+            file, output_name=f"plots/ProtoModule_{idx}.png", ToGantry=False)
+
+        tray_org.Align(fids_TFBF)
+
+        truths_1.append(
+            [tray_org.GetCenter(1)[0], tray_org.GetCenter(1)[1], tray_org.GetAngle(1)])
+        truths_2.append(
+            [tray_org.GetCenter(2)[0], tray_org.GetCenter(2)[1], tray_org.GetAngle(2)])
+        if pos == "pos1":
+            recos_1.append([silicon.GetCenter()[0],
+                           silicon.GetCenter()[1], silicon.GetAngle()])
+        else:
+            recos_2.append([silicon.GetCenter()[0],
+                           silicon.GetCenter()[1], silicon.GetAngle()])
+
+    plot_truth_vs_recos_2plots(truths_1[0], recos_1,
+                               output_name="plots/ProtoModule_comparison_pos1_2plots.png")
+    plot_truth_vs_recos_2plots(truths_2[0], recos_2,
+                               output_name="plots/ProtoModule_comparison_pos2_2plots.png")
+
+    print("Pos1: fitted hexagon center:", truths_1[0])
+    print("Pos1: reco hexagon center:", recos_1[0])
+    print("Pos2: fitted hexagon center:", truths_2[0])
+    print("Pos2: reco hexagon center:", recos_2[0])
+
+
 if __name__ == "__main__":
     # compareHexaFiducials(doSilicon=True)
-    compareBPFiducials()
+    # compareBPFiducials()
     # checkHexaFiducials()
+    checkProtoModuleFiducials()
