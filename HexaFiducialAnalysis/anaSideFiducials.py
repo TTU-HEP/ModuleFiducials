@@ -346,7 +346,7 @@ def plot_truth_vs_recos(truth, recos, line_length=20, output_name="plots/hexagon
     plt.savefig(output_name)
 
 
-def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparison.png", useOddEven=False):
+def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparison.png", useOddEven=False, colors=None):
     tx, ty, t_angle = truth
     t_angle_rad = np.radians(t_angle)
 
@@ -361,18 +361,23 @@ def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparis
                     edgecolors='black', label='Truth Point')
 
     for i, (rx, ry, _) in enumerate(recos):
-        if not useOddEven:
-            if i >= 8:
-                col = colors[2]
-            elif i >= 5:
-                col = colors[1]
+        if colors == None:
+            if not useOddEven:
+                if i >= 8:
+                    col = colors[2]
+                elif i >= 5:
+                    col = colors[1]
+                else:
+                    col = colors[0]
             else:
-                col = colors[0]
+                if i % 2 == 0:
+                    col = colors[0]
+                else:
+                    col = colors[1]
+                if i == 6:
+                    col = colors[2]
         else:
-            if i % 2 == 0:
-                col = colors[0]
-            else:
-                col = colors[1]
+            col = colors[i % len(colors)]
         ax_main.scatter(rx, ry, color=col, marker='^', s=100,
                         edgecolors='black', label=f'Reco #{i}' if i == 0 else None)
 
@@ -402,20 +407,26 @@ def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparis
 
     # Plot reco arrows
     y_vals = []
+    print("recos", recos)
     for i, (_, _, r_angle) in enumerate(recos):
         r_angle_rad = np.radians(r_angle)
-        if not useOddEven:
-            if i >= 8:
-                col = colors[2]
-            elif i >= 5:
-                col = colors[1]
+        if colors == None:
+            if not useOddEven:
+                if i >= 8:
+                    col = colors[2]
+                elif i >= 5:
+                    col = colors[1]
+                else:
+                    col = colors[0]
             else:
-                col = colors[0]
+                if i % 2 == 0:
+                    col = colors[0]
+                else:
+                    col = colors[1]
+                if i == 6:
+                    col = colors[2]
         else:
-            if i % 2 == 0:
-                col = colors[0]
-            else:
-                col = colors[1]
+            col = colors[i % len(colors)]
 
         r_angle_rad_diff = r_angle_rad - t_angle_rad + t_angle_rad_approx
         ax_angle.quiver(origin_x, origin_y, np.cos(r_angle_rad_diff),
@@ -463,15 +474,17 @@ def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparis
 def compareHexaFiducials(doSilicon=False):
     if not doSilicon:
         files = [
-            "data/Hex_Position_wPUT_DryRun1.xls",
-            "data/Hex_Position_wPUT_DryRun2.xls",
-            "data/Hex_Position_wPUT_DryRun1_04_24_2025.xls",
-            "data/Hex_Position_wPUT_DryRun2_04_24_2025.xls",
-            "data/Hex_Position_wPUT_DryRun3_04_24_2025.xls",
-            "data/Hex_Position_wPUT_DryRun1_afterchanges_04_24_2025.xls",
-            "data/Hex_Position_wPUT_DryRun2_afterchanges_04_24_2025.xls",
-            "data/Hex_Position_wPUT_DryRun1_afterchanges_04_25_2025.xls",
-            "data/Hex_Position_wPUT_DryRun2_afterchanges_04_25_2025.xls"
+            # "data/Hex_Position_wPUT_DryRun1.xls",
+            # "data/Hex_Position_wPUT_DryRun2.xls",
+            # "data/Hex_Position_wPUT_DryRun1_04_24_2025.xls",
+            # "data/Hex_Position_wPUT_DryRun2_04_24_2025.xls",
+            # "data/Hex_Position_wPUT_DryRun3_04_24_2025.xls",
+            # "data/Hex_Position_wPUT_DryRun1_afterchanges_04_24_2025.xls",
+            # "data/Hex_Position_wPUT_DryRun2_afterchanges_04_24_2025.xls",
+            # "data/Hex_Position_wPUT_DryRun1_afterchanges_04_25_2025.xls",
+            # "data/Hex_Position_wPUT_DryRun2_afterchanges_04_25_2025.xls",
+            "data/Hex_Position_wPUT_DryRun1_04_27_2025.xls",
+            "data/Hex_Position_Edges_and_Fiducials_Run2_04_27_2025.xls"
         ]
     else:
         files = [
@@ -492,7 +505,7 @@ def compareHexaFiducials(doSilicon=False):
 
     ToGantry = False
     if not doSilicon:
-        target_radius = 96.05
+        target_radius = 96.05376428507805
     else:
         target_radius = 96.175
 
@@ -579,9 +592,9 @@ def compareHexaFiducials(doSilicon=False):
     plot_truth_vs_recos(truths_2[0], recos_2, line_length=0.5,
                         output_name="plots/hexagon_comparison_pos2.png")
     plot_truth_vs_recos_2plots(truths_1[0], recos_1,
-                               output_name="plots/hexagon_comparison_pos1_2plots.png")
+                               output_name="plots/hexagon_comparison_pos1_2plots.png", colors=['red', 'orange', 'green'])
     plot_truth_vs_recos_2plots(truths_2[0], recos_2,
-                               output_name="plots/hexagon_comparison_pos2_2plots.png")
+                               output_name="plots/hexagon_comparison_pos2_2plots.png", colors=['red', 'orange', 'green'])
 
 
 def checkHexaFiducials():
@@ -595,9 +608,10 @@ def checkHexaFiducials():
         "data/Hex_Position_Edges_and_Fiducials_Run1_04_26_2025.xls",
         "data/Hex_Position_Edges_and_Fiducials_Run2_04_26_2025.xls",
         "data/Hex_Position_Edges_and_Fiducials_Run3_04_26_2025.xls",
+        "data/Hex_Position_Edges_and_Fiducials_Run1_04_27_2025.xls",
     ]
 
-    target_radius = 96.05
+    target_radius = 96.05376428507805
 
     truths_1 = []
     recos_1 = []
@@ -669,6 +683,9 @@ def checkHexaFiducials():
         print("\n\n********")
         print("Pos1: fitted hexagon center:", hex1.fitted_hexagon["center"])
         print("Pos1: fitted hexagon angle:", angle1[0])
+        print("Pos1 diff", hex1.fitted_hexagon["center"][0] - hex1_6Fids.GetCenter()[0],
+              hex1.fitted_hexagon["center"][1] - hex1_6Fids.GetCenter()[1],
+              angle1[0] - hex1_6Fids.GetAngle())
         print("Pos1, center with 4 fiducials:", hex1_6Fids.GetCenter())
         print("Pos1, angle with 4 fiducials:", hex1_6Fids.GetAngle())
         print("Pos1, center with 2 fiducials:",
@@ -678,6 +695,9 @@ def checkHexaFiducials():
 
         print("Pos2: fitted hexagon center:", hex2.fitted_hexagon["center"])
         print("Pos2: fitted hexagon angle:", angle2[0])
+        print("Pos2 diff", hex2.fitted_hexagon["center"][0] - hex2_6Fids.GetCenter()[0],
+              hex2.fitted_hexagon["center"][1] - hex2_6Fids.GetCenter()[1],
+              angle2[0] - hex2_6Fids.GetAngle())
         print("Pos2, center with 4 fiducials:", hex2_6Fids.GetCenter())
         print("Pos2, angle with 4 fiducials:", hex2_6Fids.GetAngle())
         print("Pos2, center with 2 fiducials:",
@@ -859,7 +879,7 @@ def checkProtoModuleFiducials():
 
 
 if __name__ == "__main__":
-    # compareHexaFiducials(doSilicon=True)
+    compareHexaFiducials(doSilicon=False)
     # compareBPFiducials()
     # checkHexaFiducials()
-    checkProtoModuleFiducials()
+    # checkProtoModuleFiducials()
