@@ -46,6 +46,48 @@ def extractProtoModuleFiducials(file_name, sheet_name='WorkSheet_01', output_nam
     return fiducials_pos1, fids_TFBF
 
 
+def extractModuleFiducials(file_name, sheet_name='WorkSheet_01', output_name='ModuleFiducial.png', ToGantry=False):
+    xls = pd.ExcelFile(file_name)
+    df = pd.read_excel(xls, sheet_name=sheet_name)
+    col_name = 'Unnamed: 6'
+    # extra TF and BF fiducials for alignment
+    BFX = 0.0
+    BFY = 0.0
+    BF = Fiducial(BFX, BFY)
+    TFX = float(df[col_name][18])
+    TFY = float(df[col_name][19])
+    TF = Fiducial(TFX, TFY)
+    fids_TFBF = {
+        'TF': TF,
+        'BF': BF
+    }
+    if ToGantry:
+        fids_TFBF['TF'] = TF.FlipY()
+        fids_TFBF['BF'] = BF.FlipY()
+    # pos 1
+    map_fids_idx_pos = {
+        "FD1": 37,
+        "FD2": 44,
+        "FD4": 51,
+        "FD5": 58,
+        "FD3": 25,
+        "FD6": 31,
+    }
+    fids = {}
+    for fid_name, idx in map_fids_idx_pos.items():
+        fidX = float(df[col_name][idx])
+        fidY = float(df[col_name][idx + 1])
+        fid = Fiducial(fidX, fidY)
+        fids[fid_name] = fid
+    fiducials_pos1 = HexaFiducials(
+        fids, TF=TF, BF=BF)
+    fiducials_pos1.visualize(output_name=output_name.replace(
+        ".png", "_pos1.png"))
+    if ToGantry:
+        fiducials_pos1.ToGantry()
+    return fiducials_pos1, fids_TFBF
+
+
 def extractHexaSideFiducials(file_name, sheet_name='WorkSheet_01', output_name='HexaFiducial.png', ToGantry=False, doSilicon=False):
     xls = pd.ExcelFile(file_name)
     df = pd.read_excel(xls, sheet_name=sheet_name)
@@ -354,14 +396,13 @@ def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparis
     ax_main = axes[0]
     ax_angle = axes[1]
 
-    colors = ['red', 'orange', 'green']
-
     # --- First plot: points only ---
-    ax_main.scatter(tx, ty, color='blue', marker='o', s=100,
+    ax_main.scatter(0, 0, color='blue', marker='o', s=100,
                     edgecolors='black', label='Truth Point')
 
     for i, (rx, ry, _) in enumerate(recos):
         if colors == None:
+            colors = ['red', 'orange', 'green']
             if not useOddEven:
                 if i >= 8:
                     col = colors[2]
@@ -378,7 +419,7 @@ def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparis
                     col = colors[2]
         else:
             col = colors[i % len(colors)]
-        ax_main.scatter(rx, ry, color=col, marker='^', s=100,
+        ax_main.scatter(rx - tx, ry - ty, color=col, marker='^', s=100,
                         edgecolors='black', label=f'Reco #{i}' if i == 0 else None)
 
     ax_main.grid(True)
@@ -387,6 +428,7 @@ def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparis
     ax_main.set_ylabel('Y')
     ax_main.ticklabel_format(useOffset=True, axis='x', style='sci')
     ax_main.set_title('XY Positions')
+    # ax_main.legend(loc='best')
 
     # --- Second plot: all arrows starting from the same point ---
     origin_x = 0
@@ -411,6 +453,7 @@ def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparis
     for i, (_, _, r_angle) in enumerate(recos):
         r_angle_rad = np.radians(r_angle)
         if colors == None:
+            colors = ['red', 'orange', 'green']
             if not useOddEven:
                 if i >= 8:
                     col = colors[2]
@@ -484,7 +527,10 @@ def compareHexaFiducials(doSilicon=False):
             # "data/Hex_Position_wPUT_DryRun1_afterchanges_04_25_2025.xls",
             # "data/Hex_Position_wPUT_DryRun2_afterchanges_04_25_2025.xls",
             "data/Hex_Position_wPUT_DryRun1_04_27_2025.xls",
-            "data/Hex_Position_Edges_and_Fiducials_Run2_04_27_2025.xls"
+            "data/Hex_Position_Edges_and_Fiducials_Run2_04_27_2025.xls",
+            "data/Hex_Position_wPUT_DryRun1_AfterChanges_04_28_2025.xls",
+            "data/Hex_Position_wPUT_DryRun2_AfterChanges_04_28_2025.xls",
+            "data/Hex_Position_wPUT_DryRun2_AfterChanges_Swapped_04_28_2025.xls",
         ]
     else:
         files = [
@@ -592,9 +638,9 @@ def compareHexaFiducials(doSilicon=False):
     plot_truth_vs_recos(truths_2[0], recos_2, line_length=0.5,
                         output_name="plots/hexagon_comparison_pos2.png")
     plot_truth_vs_recos_2plots(truths_1[0], recos_1,
-                               output_name="plots/hexagon_comparison_pos1_2plots.png", colors=['red', 'orange', 'green'])
+                               output_name="plots/hexagon_comparison_pos1_2plots.png", colors=['red', 'orange', 'green', 'purple', 'pink', 'brown', 'gray'])
     plot_truth_vs_recos_2plots(truths_2[0], recos_2,
-                               output_name="plots/hexagon_comparison_pos2_2plots.png", colors=['red', 'orange', 'green'])
+                               output_name="plots/hexagon_comparison_pos2_2plots.png", colors=['red', 'orange', 'green', 'purple', 'pink', 'brown', 'gray'])
 
 
 def checkHexaFiducials():
@@ -878,8 +924,117 @@ def checkProtoModuleFiducials():
     print("Pos2: reco hexagon center:", recos_2[0])
 
 
+def checkModuleFiducials():
+    files = [
+        ["pos1", "data/116.xlsx"],
+        ["pos1", "data/116_2_04-30-2025.xlsx"],
+        ["pos1", "data/116_3_04-30-2025.xlsx"],
+        ["pos2", "data/117.xlsx"],
+        ["pos2", "data/117_2_04-30-2025.xlsx"],
+        ["pos2", "data/117_3_04-30-2025.xlsx"]
+    ]
+
+    fids_TFBF_new = {
+        'TF': Fiducial(439.522, -699.113),
+        'BF': Fiducial(423.441, -1091.249)
+    }
+
+    truths_1 = []
+    recos_1 = []
+    truths_2 = []
+    recos_2 = []
+    for idx, (pos, file) in enumerate(files):
+        tray_org = extractTrayFiducials(
+            "plots/TrayFiducial.png", ToGantry=False)
+        print("tray_org", tray_org)
+        print(f"Processing {file}")
+
+        hexa_org, _ = extractModuleFiducials(
+            file, output_name=f"plots/Module_{idx}.png", ToGantry=False)
+
+        hexa = hexa_org.Align(fids_TFBF_new)
+
+        tray = tray_org.Align(fids_TFBF_new)
+        print("tray", tray)
+
+        truths_1.append(
+            [tray.GetCenter(1)[0], tray.GetCenter(1)[1], tray.GetAngle(1)])
+        truths_2.append(
+            [tray.GetCenter(2)[0], tray.GetCenter(2)[1], tray.GetAngle(2)])
+        if pos == "pos1":
+            recos_1.append([hexa.GetCenter()[0],
+                           hexa.GetCenter()[1], hexa.GetAngle() - 90.0])
+        else:
+            recos_2.append([hexa.GetCenter()[0],
+                           hexa.GetCenter()[1], hexa.GetAngle()])
+
+    plot_truth_vs_recos_2plots(truths_1[0], recos_1,
+                               output_name="plots/Module_comparison_pos1_2plots.png")
+    plot_truth_vs_recos_2plots(truths_2[0], recos_2,
+                               output_name="plots/Module_comparison_pos2_2plots.png")
+
+    print("Pos1: tray center:", truths_1[0])
+    print("Pos1: reco hexagon center:", recos_1[0])
+    print("Pos2: tray center:", truths_2[0])
+    print("Pos2: reco hexagon center:", recos_2[0])
+
+
+def checkModuleFiducialsGantry(useGantry=1):
+    tray_org = extractTrayFiducials(
+        "plots/TrayFiducial.png", ToGantry=False)
+    fids_TFBF = {
+        'TF': Fiducial(439.522, -699.113),
+        'BF': Fiducial(423.441, -1091.249)
+    }
+    tray = tray_org.Align(fids_TFBF)
+    if useGantry:
+        hex1 = HexaFiducials(
+            {"FD3": Fiducial(570.514, -728.712),
+             "FD6": Fiducial(570.489, -888.739)},
+            TF=Fiducial(439.522, -699.113),
+            BF=Fiducial(423.441, -1091.249)
+        )
+        hex2 = HexaFiducials(
+            {"FD3": Fiducial(519.565, -1079.157),
+             "FD6": Fiducial(519.726, -919.125)},
+            TF=Fiducial(439.522, -699.113),
+            BF=Fiducial(423.441, -1091.249)
+        )
+    else:
+        hex1 = HexaFiducials(
+            {"FD3": Fiducial(132.024, 367.952),
+             "FD6": Fiducial(138.450, 208.073)},
+            TF=Fiducial(0, 392.421),
+            BF=Fiducial(0, 0.)
+        )
+        hex2 = HexaFiducials(
+            {"FD3": Fiducial(95.477, 15.729),
+             "FD6": Fiducial(88.967, 175.588)},
+            TF=Fiducial(0, 392.421),
+            BF=Fiducial(0, 0)
+        )
+        hex1 = hex1.Align(fids_TFBF)
+        hex2 = hex2.Align(fids_TFBF)
+    truths_1 = [
+        tray.GetCenter(1)[0], tray.GetCenter(1)[1], tray.GetAngle(1)]
+    truths_2 = [
+        tray.GetCenter(2)[0], tray.GetCenter(2)[1], tray.GetAngle(2)]
+    recos_1 = [[hex1.GetCenter(0)[0], hex1.GetCenter(0)[1], hex1.GetAngle(0)]]
+    recos_2 = [[hex2.GetCenter(0)[0], hex2.GetCenter(0)[1], hex2.GetAngle(0)]]
+    plot_truth_vs_recos_2plots(truths_1, recos_1,
+                               output_name="plots/Module_comparison_pos1_2plots_Gantry.png")
+    plot_truth_vs_recos_2plots(truths_2, recos_2,
+                               output_name="plots/Module_comparison_pos2_2plots_Gantry.png")
+    print("Pos1: fitted hexagon center:", truths_1)
+    print("Pos1: reco hexagon center:", recos_1)
+    print("Pos2: fitted hexagon center:", truths_2)
+    print("Pos2: reco hexagon center:", recos_2)
+
+
 if __name__ == "__main__":
-    compareHexaFiducials(doSilicon=False)
+    # compareHexaFiducials(doSilicon=False)
     # compareBPFiducials()
     # checkHexaFiducials()
     # checkProtoModuleFiducials()
+    # checkModuleFiducialsGantry()
+    checkModuleFiducials()

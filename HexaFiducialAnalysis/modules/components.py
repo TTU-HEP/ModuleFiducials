@@ -293,14 +293,20 @@ class HexaFiducials(object):
         for name, fiducial in self.fiducials.items():
             x, y = fiducial.XY()
             plt.scatter(x, y, label=name)
+            plt.text(x, y, name, fontsize=12,
+                     ha='right', va='bottom', color='black')
 
         if includeTFBF:
             if self.TF is not None:
                 x, y = self.TF.XY()
                 plt.scatter(x, y, color='red', label='TF')
+                plt.text(x, y, 'TF', fontsize=12,
+                         ha='right', va='bottom', color='red')
             if self.BF is not None:
                 x, y = self.BF.XY()
                 plt.scatter(x, y, color='blue', label='BF')
+                plt.text(x, y, 'BF', fontsize=12,
+                         ha='right', va='bottom', color='blue')
             plt.legend()
         plt.xlabel("X [mm]")
         plt.ylabel("Y [mm]")
