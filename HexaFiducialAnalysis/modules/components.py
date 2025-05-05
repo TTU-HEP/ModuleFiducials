@@ -11,6 +11,22 @@ from scipy.optimize import minimize
 matplotlib.use('Agg')
 
 
+def subtractValues(vals1, vals2):
+    """
+    Subtract two lists of values element-wise.
+    """
+    assert len(vals1) == len(vals2), "Lists must be of the same length"
+    return [val1 - val2 for val1, val2 in zip(vals1, vals2)]
+
+
+def addValues(vals1, vals2):
+    """
+    Add two lists of values element-wise.
+    """
+    assert len(vals1) == len(vals2), "Lists must be of the same length"
+    return [val1 + val2 for val1, val2 in zip(vals1, vals2)]
+
+
 def AlignTFBF(fiducial, fids_TF_BF_current, fids_TF_BF_new, base="BF"):
     """
     rotate and shift the fiducials to the new TF and BF positions
@@ -374,7 +390,7 @@ class SiliconFiducials(object):
         for name, fiducial in self.fiducials.items():
             fids_new[name] = AlignTFBF(
                 fiducial, fids_TF_BF_current, fids_TF_BF, base=base)
-        return HexaFiducials(fids_new, isOGP=self.isOGP, TF=fids_TF_BF['TF'], BF=fids_TF_BF['BF'])
+        return SiliconFiducials(fids_new, isOGP=self.isOGP, TF=fids_TF_BF['TF'], BF=fids_TF_BF['BF'])
 
     def XYPoints(self):
         return np.array([fiducial.XY() for fiducial in self.fiducials.values()])
@@ -403,7 +419,7 @@ class SiliconFiducials(object):
         avg34Y = (self.fiducials["FD3"].GetY() +
                   self.fiducials["FD4"].GetY()) / 2
         # Calculate the angle between the two average points
-        angle = Angle(avg12X, avg12Y, avg34X, avg34Y) - 90.0
+        angle = Angle(avg12X, avg12Y, avg34X, avg34Y) + 180.0
         return angle
 
     def visualize(self, output_name, includeTFBF=False):
@@ -554,7 +570,7 @@ def fit_hexagon_with_radius_constraint(hexagon: HexaEdgeFiducials, target_radius
         x0=[centroid[0], centroid[1], r0, theta0],
         args=(points, target_radius),
         bounds=[(None, None), (None, None), (target_radius -
-                                             5.0, target_radius + 5.0), (None, None)],
+                                             5.0, target_radius + 5.0), (np.radians(25.0), np.radians(35.0))],
         options={"maxiter": 1000}
     )
 
