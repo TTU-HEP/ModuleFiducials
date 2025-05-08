@@ -104,6 +104,12 @@ class Fiducial(object):
         """
         return Fiducial(self.X, -self.Y)
 
+    def distance(self, fiducial):
+        """
+        Calculate the distance between two fiducials
+        """
+        return np.sqrt((self.X - fiducial.X)**2 + (self.Y - fiducial.Y)**2)
+
 
 def FidAngle(fid1, fid2):
     # Calculate the angle between two fiducials
@@ -332,6 +338,21 @@ class HexaFiducials(object):
         plt.savefig(output_name)
         plt.close()
         return
+
+    def checkQuality(self):
+        if "FD1" in self.fiducials:
+            dist12 = self.fiducials["FD1"].distance(self.fiducials["FD2"])
+            dist24 = self.fiducials["FD2"].distance(self.fiducials["FD4"])
+            dist45 = self.fiducials["FD4"].distance(self.fiducials["FD5"])
+            dist51 = self.fiducials["FD5"].distance(self.fiducials["FD1"])
+            print("FD1-FD2 distance: ", dist12)
+            print("FD2-FD4 distance: ", dist24)
+            print("FD4-FD5 distance: ", dist45)
+            print("FD5-FD1 distance: ", dist51)
+
+        if "FD3" in self.fiducials:
+            dist36 = self.fiducials["FD3"].distance(self.fiducials["FD6"])
+            print("FD3-FD6 distance: ", dist36)
 
 
 class SiliconFiducials(object):
