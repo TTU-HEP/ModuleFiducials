@@ -110,6 +110,14 @@ class Fiducial(object):
         """
         return np.sqrt((self.X - fiducial.X)**2 + (self.Y - fiducial.Y)**2)
 
+    def angle(self, fiducial1, fiducial2):
+        """
+        Calculate the angle between fid - fid1 and fid - fid2
+        """
+        x1, y1 = fiducial1.XY()
+        x2, y2 = fiducial2.XY()
+        return Angle(self.X, self.Y, x1, y1) - Angle(self.X, self.Y, x2, y2)
+
 
 def FidAngle(fid1, fid2):
     # Calculate the angle between two fiducials
@@ -207,7 +215,7 @@ class AssemblyTrayFiducials(object):
 
 class HexaFiducials(object):
     """
-    Use the four fiducials to define the center and angle of the hexagon 
+    Use the four fiducials to define the center and angle of the hexagon
     (FD1, FD2, FD4, FD5)
     or the two fiducials (FD3, FD6)
     """
@@ -345,10 +353,16 @@ class HexaFiducials(object):
             dist24 = self.fiducials["FD2"].distance(self.fiducials["FD4"])
             dist45 = self.fiducials["FD4"].distance(self.fiducials["FD5"])
             dist51 = self.fiducials["FD5"].distance(self.fiducials["FD1"])
+            angle124 = self.fiducials["FD2"].angle(
+                self.fiducials["FD1"], self.fiducials["FD4"])
+            angle245 = self.fiducials["FD4"].angle(
+                self.fiducials["FD2"], self.fiducials["FD5"])
             print("FD1-FD2 distance: ", dist12)
             print("FD2-FD4 distance: ", dist24)
             print("FD4-FD5 distance: ", dist45)
             print("FD5-FD1 distance: ", dist51)
+            print("FD1-FD2-FD4 angle: ", angle124)
+            print("FD2-FD4-FD5 angle: ", angle245)
 
         if "FD3" in self.fiducials:
             dist36 = self.fiducials["FD3"].distance(self.fiducials["FD6"])
@@ -357,8 +371,7 @@ class HexaFiducials(object):
 
 class SiliconFiducials(object):
     """
-    Use the four fiducials to define the center and angle of the hexagon 
-    (FD1, FD2, FD3, FD4)
+    Use the four fiducials to define the center and angle of the hexagon
     """
 
     def __init__(self, fiducials: dict, isOGP=True, TF=None, BF=None):
