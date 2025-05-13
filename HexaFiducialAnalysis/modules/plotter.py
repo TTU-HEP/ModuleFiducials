@@ -89,7 +89,7 @@ def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparis
         label = None
         if legends != None and i < len(legends):
             label = legends[i + 1]
-        marker = '^'
+        marker = 'h'
         if markers and len(markers) > i + 1:
             marker = markers[i + 1]
         ax_main.scatter((rx - tx)*1e3, (ry - ty)*1e3, color=col, marker=marker, s=100,
@@ -163,18 +163,23 @@ def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparis
     angle_center = t_angle_rad_approx  # radians
     angle_plus = np.deg2rad(0.01)      # convert 0.01 deg to rad
     angle_plus2 = np.deg2rad(0.02)     # convert 0.02 deg to rad
+    angle_plus3 = np.deg2rad(0.03)     # convert 0.03 deg to rad
     length = 10  # same as your quiver scale
 
     # Compute three points: center, left boundary, right boundary
     left_x = origin_x + length * np.cos(angle_center + angle_plus)
     left_x2 = origin_x + length * np.cos(angle_center + angle_plus2)
+    left_x3 = origin_x + length * np.cos(angle_center + angle_plus3)
     left_y = origin_y + length * np.sin(angle_center + angle_plus)
     left_y2 = origin_y + length * np.sin(angle_center + angle_plus2)
+    left_y3 = origin_y + length * np.sin(angle_center + angle_plus3)
 
     right_x = origin_x + length * np.cos(angle_center - angle_plus)
     right_x2 = origin_x + length * np.cos(angle_center - angle_plus2)
+    right_x3 = origin_x + length * np.cos(angle_center - angle_plus3)
     right_y = origin_y + length * np.sin(angle_center - angle_plus)
     right_y2 = origin_y + length * np.sin(angle_center - angle_plus2)
+    right_y3 = origin_y + length * np.sin(angle_center - angle_plus3)
 
     # Create the polygon for the cone
     cone = Polygon([[origin_x, origin_y],
@@ -185,10 +190,15 @@ def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparis
                      [left_x2, left_y2],
                      [right_x2, right_y2]],
                     closed=True, color='blue', alpha=0.08, label='±0.02° cone')
+    cone3 = Polygon([[origin_x, origin_y],
+                     [left_x3, left_y3],
+                     [right_x3, right_y3]],
+                    closed=True, color='blue', alpha=0.04, label='±0.03° cone')
 
     # Add it to the plot
     ax_angle.add_patch(cone)
     ax_angle.add_patch(cone2)
+    # ax_angle.add_patch(cone3)
 
     ax_angle.set_ylim(-0.0001, 0.0001)
     # ax_angle.set_ylim(-0.0011, 0.0011)

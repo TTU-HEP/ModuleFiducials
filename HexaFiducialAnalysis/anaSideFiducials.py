@@ -1,9 +1,9 @@
 from modules.components import HexaEdgeFiducials, HexaFiducials, Fiducial, fit_hexagon_with_radius_constraint, plot_fitted_hexagon, AssemblyTrayFiducials, find_angle_to_rightmost_side_midpoint, SiliconFiducials, subtractValues, addValues
+from modules.plotter import plot_truth_vs_recos_2plots
 import pandas as pd
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.patches import Polygon
 
 
 def extractProtoModuleFiducials(file_name, sheet_name='WorkSheet_01', output_name='ProtoModuleFiducial.png', ToGantry=False):
@@ -367,196 +367,6 @@ def extractTrayFiducials(output_name='TrayFiducial.png', ToGantry=False):
     if ToGantry:
         fiducials.ToGantry()
     return fiducials
-
-
-def plot_truth_vs_recos(truth, recos, line_length=20, output_name="plots/hexagon_comparison.png"):
-    tx, ty, t_angle = truth
-    t_angle = np.radians(t_angle)
-    t_end = [tx + line_length *
-             np.cos(t_angle), ty + line_length * np.sin(t_angle)]
-
-    plt.figure(figsize=(5, 5))
-
-    # Plot truth line and point
-    plt.plot([tx, t_end[0]], [ty, t_end[1]], 'b--',
-             label='Truth Line', linewidth=2)
-    plt.scatter(tx, ty, color='blue', marker='o', s=100,
-                edgecolors='black', label='Truth Point')
-
-    colors = ['red', 'orange', 'green']
-
-    for i, (rx, ry, r_angle) in enumerate(recos):
-        r_angle = np.radians(r_angle)
-        r_end = [rx + line_length *
-                 np.cos(r_angle), ry + line_length * np.sin(r_angle)]
-        r_end_goal = [rx + line_length *
-                      np.cos(t_angle), ry + line_length * np.sin(t_angle)]
-
-        # Plot reco line and point
-        if i >= 7:
-            col = colors[2]
-        elif i >= 5:
-            col = colors[1]
-        else:
-            col = colors[0]
-        plt.plot([rx, r_end[0]], [ry, r_end[1]], '-',
-                 label=f'Reco Line #{i}', linewidth=2, color=col)
-        plt.plot([rx, r_end_goal[0]], [ry, r_end_goal[1]], f'--',
-                 label=f'Reco Line Goal #{i}', linewidth=2, color=col)
-        plt.scatter(rx, ry, color=col, marker='^', s=100,
-                    edgecolors='black', label='Reco Point')
-
-        # plt.gca().set_aspect('equal')
-        # plt.legend(loc='best')
-        plt.grid(True)
-        plt.xlabel('X')
-        plt.ylabel('Y')
-        # plt.tight_layout()
-    plt.savefig(output_name)
-
-
-def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparison.png", useOddEven=False, colors=None, legends=None):
-    tx, ty, t_angle = truth
-    t_angle_rad = np.radians(t_angle)
-
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-    ax_main = axes[0]
-    ax_angle = axes[1]
-
-    # --- First plot: points only ---
-    label = None
-    if legends != None:
-        label = legends[0]
-    ax_main.scatter(0, 0, color='blue', marker='o', s=100,
-                    edgecolors='blue', label=label)
-
-    for i, (rx, ry, _) in enumerate(recos):
-        if colors == None:
-            colors = ['red', 'orange', 'green']
-            if not useOddEven:
-                if i >= 8:
-                    col = colors[2]
-                elif i >= 5:
-                    col = colors[1]
-                else:
-                    col = colors[0]
-            else:
-                if i % 2 == 0:
-                    col = colors[0]
-                else:
-                    col = colors[1]
-                if i == 6:
-                    col = colors[2]
-        else:
-            col = colors[i % len(colors)]
-        label = None
-        if legends != None and i < len(legends):
-            label = legends[i + 1]
-        ax_main.scatter(rx - tx, ry - ty, color=col, marker='^', s=100,
-                        edgecolors=col, label=label)
-
-    ax_main.grid(True)
-    ax_main.set_aspect('equal')
-    ax_main.set_xlabel('X [mm]')
-    ax_main.set_ylabel('Y [mm]')
-    ax_main.ticklabel_format(useOffset=True, axis='x', style='sci')
-    ax_main.set_title('XY Positions')
-    if legends != None:
-        ax_main.legend(loc='best')
-
-    # --- Second plot: all arrows starting from the same point ---
-    origin_x = 0
-    origin_y = 0
-
-    if t_angle_rad > np.pi/2.0 or t_angle_rad < -np.pi/2.0:
-        t_angle_rad_approx = np.radians(180.0)
-        doLeft = True
-    else:
-        t_angle_rad_approx = 0.0
-        doLeft = False
-
-    # Plot truth arrow
-    ax_angle.quiver(origin_x, origin_y,
-                    np.cos(t_angle_rad_approx), np.sin(t_angle_rad_approx),
-                    angles='xy', scale_units='xy', scale=10,
-                    color='blue', linewidth=2)
-
-    # Plot reco arrows
-    y_vals = []
-    print("recos", recos)
-    for i, (_, _, r_angle) in enumerate(recos):
-        r_angle_rad = np.radians(r_angle)
-        if colors == None:
-            colors = ['red', 'orange', 'green']
-            if not useOddEven:
-                if i >= 8:
-                    col = colors[2]
-                elif i >= 5:
-                    col = colors[1]
-                else:
-                    col = colors[0]
-            else:
-                if i % 2 == 0:
-                    col = colors[0]
-                else:
-                    col = colors[1]
-                if i == 6:
-                    col = colors[2]
-        else:
-            col = colors[i % len(colors)]
-
-        r_angle_rad_diff = r_angle_rad - t_angle_rad + t_angle_rad_approx
-        ax_angle.quiver(origin_x, origin_y, np.cos(r_angle_rad_diff),
-                        np.sin(r_angle_rad_diff),
-                        angles='xy', scale_units='xy', scale=10,
-                        color=col, linewidth=2)
-        y_vals.append(np.sin(r_angle_rad))
-
-    # Parameters
-    angle_center = t_angle_rad_approx  # radians
-    angle_plus = np.deg2rad(0.01)      # convert 0.01 deg to rad
-    angle_plus2 = np.deg2rad(0.02)     # convert 0.02 deg to rad
-    length = 10  # same as your quiver scale
-
-    # Compute three points: center, left boundary, right boundary
-    left_x = origin_x + length * np.cos(angle_center + angle_plus)
-    left_x2 = origin_x + length * np.cos(angle_center + angle_plus2)
-    left_y = origin_y + length * np.sin(angle_center + angle_plus)
-    left_y2 = origin_y + length * np.sin(angle_center + angle_plus2)
-
-    right_x = origin_x + length * np.cos(angle_center - angle_plus)
-    right_x2 = origin_x + length * np.cos(angle_center - angle_plus2)
-    right_y = origin_y + length * np.sin(angle_center - angle_plus)
-    right_y2 = origin_y + length * np.sin(angle_center - angle_plus2)
-
-    # Create the polygon for the cone
-    cone = Polygon([[origin_x, origin_y],
-                    [left_x, left_y],
-                    [right_x, right_y]],
-                   closed=True, color='blue', alpha=0.15, label='±0.01° cone')
-    cone2 = Polygon([[origin_x, origin_y],
-                     [left_x2, left_y2],
-                     [right_x2, right_y2]],
-                    closed=True, color='blue', alpha=0.08, label='±0.02° cone')
-
-    # Add it to the plot
-    ax_angle.add_patch(cone)
-    ax_angle.add_patch(cone2)
-
-    ax_angle.set_ylim(-0.0001, 0.0001)
-    # ax_angle.set_ylim(-0.0011, 0.0011)
-    # ax_angle.set_xlim(-0.11, 0.11)
-    if doLeft:
-        ax_angle.set_xlim(-0.11, 0.)
-    else:
-        ax_angle.set_xlim(0., 0.11)
-    ax_angle.grid(True)
-    # ax_angle.set_aspect('equal')
-    ax_angle.legend(loc='best')
-    ax_angle.set_title('Angle Directions')
-
-    plt.savefig(output_name)
-    plt.close()
 
 
 def compareTray2HexaEdges(doSilicon=False):
@@ -1081,8 +891,104 @@ def checkModuleFiducialsGantry(useGantry=1):
             TF=Fiducial(439.303, -699.306),
             BF=Fiducial(423.390, -1091.439)
         )
-        hex1s = [hex11, hex12, hex13, hex14]
-        # hex1s = [hex15]
+        # sonaina's numbers
+        hex16 = HexaFiducials(
+            {"FD3": Fiducial(132.214, 368.315),
+             "FD6": Fiducial(138.499, 208.413)},
+            TF=Fiducial(0, 392.421),
+            BF=Fiducial(0, 0.)
+        )
+        hex17 = HexaFiducials(
+            {"FD6": Fiducial(570.601, -888.572),
+             "FD3": Fiducial(570.724, -728.577)},
+            TF=Fiducial(439.654, -699.005),
+            BF=Fiducial(423.565, -1091.132)
+        )
+        hex18 = HexaFiducials(
+            {"FD6": Fiducial(570.585, -888.584),
+                "FD3": Fiducial(570.726, -728.568)},
+            TF=Fiducial(439.655, -699.008),
+            BF=Fiducial(423.565, -1091.134)
+        )
+        hex19 = HexaFiducials(
+            {"FD6": Fiducial(570.637, -888.572),
+                "FD3": Fiducial(570.676, -728.578)},
+            TF=Fiducial(439.655, -699.017),
+            BF=Fiducial(423.564, -1091.139)
+        )
+        hex101 = HexaFiducials(
+            {"FD6": Fiducial(570.658, -888.574),
+             "FD3": Fiducial(570.680, -728.589)},
+            TF=Fiducial(439.650, -699.012),
+            BF=Fiducial(423.561, -1091.137)
+        )
+        hex102 = HexaFiducials(
+            {"FD6": Fiducial(570.655, -888.606),
+             "FD3": Fiducial(570.651, -728.596)},
+            TF=Fiducial(439.654, -699.023),
+            BF=Fiducial(423.565, -1091.145)
+        )
+        hex103 = HexaFiducials(
+            {"FD6": Fiducial(570.429, -888.799),
+             "FD3": Fiducial(570.525, -728.755)},
+            TF=Fiducial(439.462, -699.221),
+            BF=Fiducial(423.402, -1091.346)
+        )
+        hex110 = HexaFiducials(
+            {"FD6": Fiducial(570.468, -888.818),
+             "FD3": Fiducial(570.510, -728.766)},
+            TF=Fiducial(439.466, -699.220),
+            BF=Fiducial(423.404, -1091.352)
+        )
+        hex111 = HexaFiducials(
+            {"FD6": Fiducial(570.462, -888.805),
+             "FD3": Fiducial(570.501, -728.753)},
+            TF=Fiducial(439.465, -699.220),
+            BF=Fiducial(423.401, -1091.350)
+        )
+        hex112 = HexaFiducials(
+            {"FD6": Fiducial(570.430, -888.782),
+             "FD3": Fiducial(570.535, -728.736)},
+            TF=Fiducial(439.467, -699.222),
+            BF=Fiducial(423.408, -1091.347)
+        )
+        hex11X = HexaFiducials(
+            {"FD3": Fiducial(570.525, -728.754),
+             "FD6": Fiducial(570.443, -888.807)},
+            TF=Fiducial(439.472, -699.210),
+            BF=Fiducial(423.410, -1091.347)
+        )
+        hex120 = HexaFiducials(
+            {"FD3": Fiducial(570.468, -728.523),
+             "FD6": Fiducial(570.498, -888.541)},
+            TF=Fiducial(439.378, -699.053),
+            BF=Fiducial(423.554, -1091.200)
+        )
+        hex121 = HexaFiducials(
+            {"FD3": Fiducial(570.474, -728.529),
+             "FD6": Fiducial(570.511, -888.546)},
+            TF=Fiducial(439.379, -699.055),
+            BF=Fiducial(423.555, -1091.197)
+        )
+        hex122 = HexaFiducials(
+            {"FD3": Fiducial(570.475, -728.512),
+             "FD6": Fiducial(570.478, -888.530)},
+            TF=Fiducial(439.380, -699.060),
+            BF=Fiducial(423.554, -1091.200)
+        )
+        hex12X = HexaFiducials(
+            {"FD3": Fiducial(570.702, -728.573),
+             "FD6": Fiducial(570.602, -888.588)},
+            TF=Fiducial(439.626, -699.041),
+            BF=Fiducial(423.606, -1091.179)
+        )
+        hex12X_OGP = HexaFiducials(
+            {"FD3": Fiducial(132.136, 368.337),
+             "FD6": Fiducial(138.580, 208.456)},
+            TF=Fiducial(0., 392.466),
+            BF=Fiducial(0., 0.)
+        )
+        hex1s = [hex120, hex121, hex122, hex12X, hex12X_OGP]
         hex21 = HexaFiducials(
             {"FD3": Fiducial(519.650, -1079.439),
              "FD6": Fiducial(519.690, -919.415)},
@@ -1113,8 +1019,97 @@ def checkModuleFiducialsGantry(useGantry=1):
             TF=Fiducial(439.303, -699.306),
             BF=Fiducial(423.390, -1091.439)
         )
-        hex2s = [hex21, hex22, hex23, hex24]
-        # hex2s = [hex25]
+        hex26 = HexaFiducials(
+            {"FD3": Fiducial(95.405, 15.995),
+             "FD6": Fiducial(89.077, 175.898)},
+            TF=Fiducial(0, 392.466),
+            BF=Fiducial(0, 0)
+        )
+        hex27 = HexaFiducials(
+            {"FD3": Fiducial(519.769, -1079.072),
+             "FD6": Fiducial(519.755, -919.096)},
+            TF=Fiducial(439.654, -699.005),
+            BF=Fiducial(423.565, -1091.132)
+        )
+        hex28 = HexaFiducials(
+            {"FD3": Fiducial(519.803, -1079.035),
+             "FD6": Fiducial(519.774, -919.056)},
+            TF=Fiducial(439.655, -699.008),
+            BF=Fiducial(423.565, -1091.134)
+        )
+        hex29 = HexaFiducials(
+            {"FD3": Fiducial(519.792, -1079.050),
+             "FD6": Fiducial(519.714, -919.084)},
+            TF=Fiducial(439.655, -699.017),
+            BF=Fiducial(423.564, -1091.139)
+        )
+        hex201 = HexaFiducials(
+            {"FD3": Fiducial(519.777, -1079.051),
+             "FD6": Fiducial(519.808, -919.030)},
+            TF=Fiducial(439.650, -699.012),
+            BF=Fiducial(423.561, -1091.137)
+        )
+        hex202 = HexaFiducials(
+            {"FD3": Fiducial(519.805, -1079.090),
+             "FD6": Fiducial(519.820, -919.060)},
+            TF=Fiducial(439.654, -699.023),
+            BF=Fiducial(423.565, -1091.145)
+        )
+        hex210 = HexaFiducials(
+            {"FD3": Fiducial(519.561, -1079.293),
+             "FD6": Fiducial(519.659, -919.228)},
+            TF=Fiducial(439.466, -699.220),
+            BF=Fiducial(423.404, -1091.352)
+        )
+        hex211 = HexaFiducials(
+            {"FD3": Fiducial(519.575, -1079.290),
+             "FD6": Fiducial(519.678, -919.227)},
+            TF=Fiducial(439.465, -699.220),
+            BF=Fiducial(423.401, -1091.350)
+        )
+        hex212 = HexaFiducials(
+            {"FD3": Fiducial(519.574, -1079.304),
+             "FD6": Fiducial(519.657, -919.237)},
+            TF=Fiducial(439.467, -699.222),
+            BF=Fiducial(423.408, -1091.347)
+        )
+        hex21X = HexaFiducials(
+            {"FD3": Fiducial(519.631, -1079.282),
+             "FD6": Fiducial(519.637, -919.222)},
+            TF=Fiducial(439.472, -699.210),
+            BF=Fiducial(423.410, -1091.347)
+        )
+        hex220 = HexaFiducials(
+            {"FD3": Fiducial(519.801, -1079.065),
+             "FD6": Fiducial(519.648, -919.039)},
+            TF=Fiducial(439.378, -699.053),
+            BF=Fiducial(423.554, -1091.200)
+        )
+        hex221 = HexaFiducials(
+            {"FD3": Fiducial(519.808, -1079.072),
+             "FD6": Fiducial(519.651, -919.041)},
+            TF=Fiducial(439.379, -699.055),
+            BF=Fiducial(423.555, -1091.197)
+        )
+        hex222 = HexaFiducials(
+            {"FD3": Fiducial(519.767, -1079.068),
+             "FD6": Fiducial(519.688, -919.047)},
+            TF=Fiducial(439.380, -699.060),
+            BF=Fiducial(423.554, -1091.200)
+        )
+        hex22X = HexaFiducials(
+            {"FD3": Fiducial(519.816, -1079.105),
+             "FD6": Fiducial(519.818, -919.064)},
+            TF=Fiducial(439.626, -699.041),
+            BF=Fiducial(423.606, -1091.179)
+        )
+        hex22X_OGP = HexaFiducials(
+            {"FD3": Fiducial(95.632, 16.015),
+             "FD6": Fiducial(89.093, 175.920)},
+            TF=Fiducial(0, 392.466),
+            BF=Fiducial(0, 0.)
+        )
+        hex2s = [hex220, hex221, hex222, hex22X, hex22X_OGP]
     else:
         hex1 = HexaFiducials(
             {"FD3": Fiducial(132.024, 367.952),
@@ -1147,9 +1142,9 @@ def checkModuleFiducialsGantry(useGantry=1):
     # recos_1 = [[hex1.GetCenter(0)[0], hex1.GetCenter(0)[1], hex1.GetAngle(0)]]
     # recos_2 = [[hex2.GetCenter(0)[0], hex2.GetCenter(0)[1], hex2.GetAngle(0)]]
     plot_truth_vs_recos_2plots(truths_1, recos_1,
-                               output_name="plots/Module_comparison_pos1_2plots_Gantry.png", legends=["Tray", "PCB1", "PCB2", "PCB3", "PCB4 with corrections", "PCB5 With Corrections"], colors=['red', 'orange', 'green', 'purple', 'pink', 'brown'])
+                               output_name="plots/Module_comparison_pos1_2plots_Gantry.png", legends=["Tray", "PCB1", "PCB2", "PCB3", "PCB4 glued", "PCB5 With Corrections"], colors=['red', 'orange', 'green', 'purple', 'pink', 'brown'])
     plot_truth_vs_recos_2plots(truths_2, recos_2,
-                               output_name="plots/Module_comparison_pos2_2plots_Gantry.png", legends=["Tray", "PCB1", "PCB2", "PCB3", "PCB4 with corrections", "PCB5 With Corrections"], colors=['red', 'orange', 'green', 'purple', 'pink', 'brown'])
+                               output_name="plots/Module_comparison_pos2_2plots_Gantry.png", legends=["Tray", "PCB1", "PCB2", "PCB3", "PCB4 glued", "PCB5 With Corrections"], colors=['red', 'orange', 'green', 'purple', 'pink', 'brown'])
     print("Pos1: fitted hexagon center:", truths_1)
     print("Pos1: reco hexagon center:", recos_1)
     print("Pos2: fitted hexagon center:", truths_2)
@@ -1165,20 +1160,54 @@ def checkWholeModuleFiducialsGantry():
     }
     fids_TFBFs = [fids_TFBF_5]
 
-    hex1 = HexaFiducials(
+    hex11 = HexaFiducials(
         {"FD3": Fiducial(570.404, -728.777),
          "FD6": Fiducial(570.340, -888.797)},
         TF=Fiducial(439.303, -699.306),
         BF=Fiducial(423.390, -1091.439)
     )
-    hex2 = HexaFiducials(
+    hex21 = HexaFiducials(
         {"FD3": Fiducial(519.478, -1079.363),
          "FD6": Fiducial(519.629, -919.337)},
         TF=Fiducial(439.303, -699.306),
         BF=Fiducial(423.390, -1091.439)
     )
+    hex12 = HexaFiducials(
+        {"FD3": Fiducial(570.742, -728.577),
+         "FD6": Fiducial(570.629, -888.605)},
+        TF=Fiducial(439.652, -699.022),
+        BF=Fiducial(423.564, -1091.147)
+    )
+    hex22 = HexaFiducials(
+        {"FD3": Fiducial(519.772, -1079.099),
+         "FD6": Fiducial(519.824, -919.057)},
+        TF=Fiducial(439.652, -699.022),
+        BF=Fiducial(423.564, -1091.147)
+    )
+    hex121 = HexaFiducials(
+        {"FD3": Fiducial(132.205, 368.485),
+         "FD6": Fiducial(138.661, 208.598),
+         "FD1": Fiducial(56.897, 250.330),
+         "FD5": Fiducial(217.588, 256.876),
+         "FD2": Fiducial(54.077, 320.285),
+         "FD4": Fiducial(213.972, 326.734)
+         },
+        TF=Fiducial(0, 392.451),
+        BF=Fiducial(0., 0.)
+    )
+    hex221 = HexaFiducials(
+        {"FD3": Fiducial(95.682, 16.159),
+         "FD6": Fiducial(89.168, 176.059),
+         "FD1": Fiducial(170.937, 134.335),
+         "FD2": Fiducial(173.795, 64.413),
+         "FD4": Fiducial(13.893,  57.873),
+         "FD5": Fiducial(11.000, 127.831),
+         },
+        TF=Fiducial(0, 392.451),
+        BF=Fiducial(0, 0)
+    )
 
-    silicon1 = SiliconFiducials(
+    silicon11 = SiliconFiducials(
         {
             "FD2": Fiducial(487.316, -770.810),  # channel 8
             "FD1": Fiducial(487.318, -846.808),  # channel 1
@@ -1188,7 +1217,7 @@ def checkWholeModuleFiducialsGantry():
         TF=Fiducial(439.303, -699.301),
         BF=Fiducial(423.388, -1091.439)
     )
-    silicon2 = SiliconFiducials(
+    silicon21 = SiliconFiducials(
         {
             "FD1": Fiducial(602.517, -961.359),  # channel 1
             "FD2": Fiducial(602.544, -1037.358),  # channel 8
@@ -1198,10 +1227,76 @@ def checkWholeModuleFiducialsGantry():
         TF=Fiducial(439.303, -699.301),
         BF=Fiducial(423.388, -1091.439)
     )
-    hex1 = hex1.Align(fids_TFBF_5)
-    hex2 = hex2.Align(fids_TFBF_5)
-    silicon1 = silicon1.Align(fids_TFBF_5)
-    silicon2 = silicon2.Align(fids_TFBF_5)
+    silicon12 = SiliconFiducials(
+        {
+            "FD2": Fiducial(487.654, -770.551),  # channel 8
+            "FD1": Fiducial(487.620, -846.547),  # channel 1
+            "FD3": Fiducial(653.624, -846.667),  # channel 191
+            "FD4": Fiducial(653.660, -770.668),  # channel 197
+        },
+        TF=Fiducial(439.653, -699.020),
+        BF=Fiducial(423.561, -1091.152)
+    )
+    silicon22 = SiliconFiducials(
+        {
+            "FD1": Fiducial(602.755, -961.146),  # channel 1
+            "FD2": Fiducial(602.753, -1037.144),  # channel 8
+            "FD3": Fiducial(436.741, -961.086),  # channel 191
+            "FD4": Fiducial(436.737, -1037.086),  # channel 197
+        },
+        TF=Fiducial(439.653, -699.020),
+        BF=Fiducial(423.561, -1091.152)
+    )
+
+    silicon105 = SiliconFiducials(
+        {
+            "FD2": Fiducial(487.465, -770.740),  # channel 8
+            "FD1": Fiducial(487.444, -846.734),  # channel 1
+            "FD3": Fiducial(653.448, -846.817),  # channel 191
+            "FD4": Fiducial(653.468, -770.820),  # channel 197
+        },
+        TF=Fiducial(439.468, -699.218),
+        BF=Fiducial(423.404, -1091.346)
+    )
+    silicon106 = SiliconFiducials(
+        {
+            "FD1": Fiducial(602.641, -961.276),  # channel 1
+            "FD2": Fiducial(602.661, -1037.270),  # channel 8
+            "FD3": Fiducial(436.627, -961.263),  # channel 191
+            "FD4": Fiducial(436.644, -1037.265),  # channel 197
+        },
+        TF=Fiducial(439.468, -699.218),
+        BF=Fiducial(423.404, -1091.346)
+    )
+
+    hex105 = HexaFiducials(
+        {"FD3": Fiducial(570.525, -728.754),
+         "FD6": Fiducial(570.443, -888.807)},
+        TF=Fiducial(439.472, -699.210),
+        BF=Fiducial(423.410, -1091.347)
+    )
+
+    hex106 = HexaFiducials(
+        {"FD3": Fiducial(519.631, -1079.282),
+         "FD6": Fiducial(519.637, -919.222)},
+        TF=Fiducial(439.472, -699.210),
+        BF=Fiducial(423.410, -1091.347)
+    )
+    hex11 = hex11.Align(fids_TFBF_5)
+    hex12 = hex12.Align(fids_TFBF_5)
+    hex21 = hex21.Align(fids_TFBF_5)
+    hex22 = hex22.Align(fids_TFBF_5)
+    hex121 = hex121.Align(fids_TFBF_5)
+    hex221 = hex221.Align(fids_TFBF_5)
+    silicon11 = silicon11.Align(fids_TFBF_5)
+    silicon12 = silicon12.Align(fids_TFBF_5)
+    silicon21 = silicon21.Align(fids_TFBF_5)
+    silicon22 = silicon22.Align(fids_TFBF_5)
+
+    silicon105 = silicon105.Align(fids_TFBF_5)
+    silicon106 = silicon106.Align(fids_TFBF_5)
+    hex105 = hex105.Align(fids_TFBF_5)
+    hex106 = hex106.Align(fids_TFBF_5)
 
     tray = tray_org.Align(fids_TFBFs[-1])
     truths_1 = [
@@ -1210,22 +1305,49 @@ def checkWholeModuleFiducialsGantry():
         tray.GetCenter(2)[0], tray.GetCenter(2)[1], tray.GetAngle(2)]
     recos_1 = []
     recos_2 = []
-    recos_1.append(
-        [silicon1.GetCenter()[0], silicon1.GetCenter()[1], silicon1.GetAngle()])
-    recos_2.append(
-        [silicon2.GetCenter()[0], silicon2.GetCenter()[1], silicon2.GetAngle()])
-    recos_1.append([hex1.GetCenter(0)[0],
-                    hex1.GetCenter(0)[1], hex1.GetAngle(0)])
-    recos_2.append([hex2.GetCenter(0)[0],
-                    hex2.GetCenter(0)[1], hex2.GetAngle(0)])
+    recos_1.append([silicon105.GetCenter()[0],
+                    silicon105.GetCenter()[1], silicon105.GetAngle()])
+    recos_2.append([silicon106.GetCenter()[0],
+                    silicon106.GetCenter()[1], silicon106.GetAngle()])
+    recos_1.append([hex105.GetCenter(0)[0],
+                    hex105.GetCenter(0)[1], hex105.GetAngle(0)])
+    recos_2.append([hex106.GetCenter(0)[0],
+                    hex106.GetCenter(0)[1], hex106.GetAngle(0)])
+
+    # recos_1.append(
+    #    [silicon12.GetCenter()[0], silicon12.GetCenter()[1], silicon12.GetAngle()])
+    # recos_2.append(
+    #    [silicon22.GetCenter()[0], silicon22.GetCenter()[1], silicon22.GetAngle()])
+    # recos_1.append([hex12.GetCenter(0)[0],
+    #                hex12.GetCenter(0)[1], hex12.GetAngle(0)])
+    # recos_2.append([hex22.GetCenter(0)[0],
+    #                hex22.GetCenter(0)[1], hex22.GetAngle(0)])
+    # recos_1.append([hex121.GetCenter(0)[0],
+    #                hex121.GetCenter(0)[1], hex121.GetAngle(0)])
+    # recos_2.append([hex221.GetCenter(0)[0],
+    #                hex221.GetCenter(0)[1], hex221.GetAngle(0)])
+    # recos_1.append([hex121.GetCenter(1)[0],
+    #                hex121.GetCenter(1)[1], hex121.GetAngle(1)])
+    # recos_2.append([hex221.GetCenter(1)[0],
+    #                hex221.GetCenter(1)[1], hex221.GetAngle(1)])
+
+    colors = ['red', 'orange', 'green', 'purple', 'pink']
+    legends = ["Tray", "Sensor Gantry",
+               "PCB Gantry", "PCB OGP 2FDs", "PCB OGP 4FDs"]
+    markers = ['o', '^', '^', 'v', 'v']
     plot_truth_vs_recos_2plots(truths_1, recos_1,
-                               output_name="plots/WholeModule_comparison_pos1_2plots_Gantry.png", legends=["Tray", "Sensor", "PCB"])
+                               output_name="plots/WholeModule_comparison_pos1_2plots_Gantry.png", legends=legends, colors=colors, xyrange=120.0, markers=markers)
     plot_truth_vs_recos_2plots(truths_2, recos_2,
-                               output_name="plots/WholeModule_comparison_pos2_2plots_Gantry.png", legends=["Tray", "Sensor", "PCB"])
+                               output_name="plots/WholeModule_comparison_pos2_2plots_Gantry.png", legends=legends, colors=colors, xyrange=120.0, markers=markers)
     print("Pos1: fitted hexagon center:", truths_1)
     print("Pos1: reco hexagon center:", recos_1)
     print("Pos2: fitted hexagon center:", truths_2)
     print("Pos2: reco hexagon center:", recos_2)
+
+    # print("check quality OGP Pos1 ", hex121.checkQuality())
+    # print("check quality OGP Pos2 ", hex221.checkQuality())
+    # print("check quality Pos1 ", hex12.checkQuality())
+    # print("check quality Pos2 ", hex22.checkQuality())
 
 
 def checkProtoModuleFiducialsGantry(useGantry=1):
@@ -1237,7 +1359,7 @@ def checkProtoModuleFiducialsGantry(useGantry=1):
     }
     fids_TFBFs = [fids_TFBF_1]
     if useGantry:
-        silicon1 = SiliconFiducials(
+        silicon11 = SiliconFiducials(
             {
                 "FD2": Fiducial(487.316, -770.810),  # channel 8
                 "FD1": Fiducial(487.318, -846.808),  # channel 1
@@ -1247,7 +1369,7 @@ def checkProtoModuleFiducialsGantry(useGantry=1):
             TF=Fiducial(439.303, -699.301),
             BF=Fiducial(423.388, -1091.439)
         )
-        silicon2 = SiliconFiducials(
+        silicon21 = SiliconFiducials(
             {
                 "FD1": Fiducial(602.517, -961.359),  # channel 1
                 "FD2": Fiducial(602.544, -1037.358),  # channel 8
@@ -1257,8 +1379,68 @@ def checkProtoModuleFiducialsGantry(useGantry=1):
             TF=Fiducial(439.303, -699.301),
             BF=Fiducial(423.388, -1091.439)
         )
-        silicon1s = [silicon1]
-        silicon2s = [silicon2]
+        silicon12 = SiliconFiducials(
+            {
+                "FD2": Fiducial(487.654, -770.551),  # channel 8
+                "FD1": Fiducial(487.620, -846.547),  # channel 1
+                "FD3": Fiducial(653.624, -846.667),  # channel 191
+                "FD4": Fiducial(653.660, -770.668),  # channel 197
+            },
+            TF=Fiducial(439.653, -699.020),
+            BF=Fiducial(423.561, -1091.152)
+        )
+        silicon22 = SiliconFiducials(
+            {
+                "FD1": Fiducial(602.755, -961.146),  # channel 1
+                "FD2": Fiducial(602.753, -1037.144),  # channel 8
+                "FD3": Fiducial(436.741, -961.086),  # channel 191
+                "FD4": Fiducial(436.737, -1037.086),  # channel 197
+            },
+            TF=Fiducial(439.653, -699.020),
+            BF=Fiducial(423.561, -1091.152)
+        )
+        silicon13 = SiliconFiducials(
+            {
+                "FD2": Fiducial(487.465, -770.740),  # channel 8
+                "FD1": Fiducial(487.444, -846.734),  # channel 1
+                "FD3": Fiducial(653.448, -846.817),  # channel 191
+                "FD4": Fiducial(653.468, -770.820),  # channel 197
+            },
+            TF=Fiducial(439.468, -699.218),
+            BF=Fiducial(423.404, -1091.346)
+        )
+        silicon23 = SiliconFiducials(
+            {
+                "FD1": Fiducial(602.641, -961.276),  # channel 1
+                "FD2": Fiducial(602.661, -1037.270),  # channel 8
+                "FD3": Fiducial(436.627, -961.263),  # channel 191
+                "FD4": Fiducial(436.644, -1037.265),  # channel 197
+            },
+            TF=Fiducial(439.468, -699.218),
+            BF=Fiducial(423.404, -1091.346)
+        )
+        silicon14 = SiliconFiducials(
+            {
+                "FD2": Fiducial(487.429, -770.556),  # channel 8
+                "FD1": Fiducial(487.460, -846.554),  # channel 1
+                "FD3": Fiducial(653.468, -846.522),  # channel 191
+                "FD4": Fiducial(653.433, -770.526),  # channel 197
+            },
+            TF=Fiducial(439.381, -699.066),
+            BF=Fiducial(423.554, -1091.204)
+        )
+        silicon24 = SiliconFiducials(
+            {
+                "FD1": Fiducial(602.700, -961.026),  # channel 1
+                "FD2": Fiducial(602.770, -1037.023),  # channel 8
+                "FD3": Fiducial(436.686, -961.127),  # channel 191
+                "FD4": Fiducial(436.754, -1037.125),  # channel 197
+            },
+            TF=Fiducial(439.381, -699.066),
+            BF=Fiducial(423.554, -1091.204)
+        )
+        silicon1s = [silicon14]
+        silicon2s = [silicon24]
     else:
         hex1 = HexaFiducials(
             {"FD3": Fiducial(132.024, 367.952),
@@ -1290,10 +1472,11 @@ def checkProtoModuleFiducialsGantry(useGantry=1):
                         silicon2.GetCenter()[1], silicon2.GetAngle()])
     # recos_1 = [[hex1.GetCenter(0)[0], hex1.GetCenter(0)[1], hex1.GetAngle(0)]]
     # recos_2 = [[hex2.GetCenter(0)[0], hex2.GetCenter(0)[1], hex2.GetAngle(0)]]
+    legends = ["Tray", "Silicon1", "Silicon2", "Silicon3", "Silicon4"]
     plot_truth_vs_recos_2plots(truths_1, recos_1,
-                               output_name="plots/ProtoModule_comparison_pos1_2plots_Gantry.png")
+                               output_name="plots/ProtoModule_comparison_pos1_2plots_Gantry.png", legends=legends)
     plot_truth_vs_recos_2plots(truths_2, recos_2,
-                               output_name="plots/ProtoModule_comparison_pos2_2plots_Gantry.png")
+                               output_name="plots/ProtoModule_comparison_pos2_2plots_Gantry.png", legends=legends)
     print("Pos1: fitted hexagon center:", truths_1)
     print("Pos1: reco hexagon center:", recos_1)
     print("Pos2: fitted hexagon center:", truths_2)
@@ -1329,5 +1512,5 @@ if __name__ == "__main__":
     # checkProtoModuleFiducials()
     checkModuleFiducialsGantry()
     # checkProtoModuleFiducialsGantry()
-    checkWholeModuleFiducialsGantry()
+    # checkWholeModuleFiducialsGantry()
     # checkModuleFiducials()

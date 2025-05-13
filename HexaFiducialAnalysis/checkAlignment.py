@@ -43,7 +43,7 @@ print("recos_pos1", recos_pos1)
 print("recos_pos2", recos_pos2)
 
 legends = ["Tray", "Silicon", "PCB"]
-colors = ['red', 'orange', 'green', 'purple', 'pink', 'brown']
+colors = ['gray', 'green', 'red', 'orange', 'purple', 'pink', 'brown']
 
 plot_truth_vs_recos_2plots(truths_pos1, recos_pos1,
                            output_name="plots/WholeModule_comparison_pos1_Gantry.png", legends=legends, colors=colors)
