@@ -28,7 +28,6 @@ def readJsonFile(f_input, isProto=False):
     tray = {}
     for key, value in tray_info.items():
         tray[key] = Fiducial(value[0], value[1])
-    print(tray)
 
     if isProto:
         className = SiliconFiducials
@@ -40,7 +39,6 @@ def readJsonFile(f_input, isProto=False):
         pos1 = {}
         for key, value in pos1_info.items():
             pos1[key] = Fiducial(value[0], value[1])
-        print(pos1)
 
         hex_pos1 = className(pos1, TF=tray["TF"], BF=tray["BF"])
 
@@ -49,7 +47,6 @@ def readJsonFile(f_input, isProto=False):
         pos2 = {}
         for key, value in pos2_info.items():
             pos2[key] = Fiducial(value[0], value[1])
-        print(pos2)
 
         hex_pos2 = className(pos2, TF=tray["TF"], BF=tray["BF"])
 
