@@ -50,11 +50,13 @@ def plot_truth_vs_recos(truth, recos, line_length=20, output_name="plots/hexagon
     plt.savefig(output_name)
 
 
-def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparison.png", useOddEven=False, colors=None, legends=None, xyrange=150, markers=None):
+def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparison.png", useOddEven=False, colors=None, legends=None, xyrange=150, markers=None,module_id=None):
     tx, ty, t_angle = truth
     t_angle_rad = np.radians(t_angle)
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+    if module_id is not None:
+        fig.suptitle(f'Module {module_id}')
     ax_main = axes[0]
     ax_angle = axes[1]
 
@@ -111,7 +113,7 @@ def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparis
     ax_main.ticklabel_format(useOffset=True, axis='x', style='sci')
     ax_main.set_title('XY Positions')
     if legends != None:
-        ax_main.legend(loc='best')
+        ax_main.legend(loc='upper left')
 
     # --- Second plot: all arrows starting from the same point ---
     origin_x = 0

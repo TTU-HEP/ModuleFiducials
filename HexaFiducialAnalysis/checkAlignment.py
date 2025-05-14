@@ -93,9 +93,9 @@ def checkWholeModules(f_proto, f_module, suffix=""):
     suffix_pos2 = suffix.split("_")[1]
 
     plot_truth_vs_recos_2plots(truths_pos1, recos_pos1,
-                               output_name=f"plots/WholeModule_pos1_Gantry_{suffix_pos1}.png", legends=legends, colors=colors)
+                               output_name=f"plots/WholeModule_pos1_Gantry_{suffix_pos1}.png", legends=legends, colors=colors, module_id=suffix_pos1)
     plot_truth_vs_recos_2plots(truths_pos2, recos_pos2,
-                               output_name=f"plots/WholeModule_pos2_Gantry_{suffix_pos2}.png", legends=legends, colors=colors)
+                               output_name=f"plots/WholeModule_pos2_Gantry_{suffix_pos2}.png", legends=legends, colors=colors, module_id=suffix_pos2)
     
     diffs_sensor_tray = [[recos_pos1[0][0] - truths_pos1[0],
                          recos_pos1[0][1] - truths_pos1[1],
