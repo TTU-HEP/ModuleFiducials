@@ -1,6 +1,6 @@
 from modules.components import Fiducial
 from modules.utils import readJsonFile, LoadTray
-from modules.plotter import plot_truth_vs_recos_2plots
+from modules.plotter import plot_truth_vs_recos_2plots, make_accuracy_plot
 
 
 f_tray = "jsondata/tray.json"
@@ -53,9 +53,6 @@ def checkModules(f_modules, isProto=False, outputname="plots/Module_comparison")
 
 
 def checkWholeModules(f_proto, f_module):
-    f_proto = "jsondata/protomodules.json"
-    f_module = "jsondata/modules.json"
-
     _, sil_pos1, sil_pos2 = readJsonFile(f_proto, isProto=True)
     _, hex_pos1, hex_pos2 = readJsonFile(f_module, isProto=False)
 
@@ -96,6 +93,14 @@ def checkWholeModules(f_proto, f_module):
     plot_truth_vs_recos_2plots(truths_pos2, recos_pos2,
                                output_name="plots/WholeModule_comparison_pos2_Gantry.png", legends=legends, colors=colors)
 
+    make_accuracy_plot("Module_1",
+                       recos_pos1[0][0] - truths_pos1[0],
+                       recos_pos1[0][1] - truths_pos1[1],
+                       recos_pos1[1][0] - truths_pos1[0],
+                       recos_pos1[1][1] - truths_pos1[1],
+                       recos_pos1[0][2] - truths_pos1[2],
+                       recos_pos1[1][2] - truths_pos1[2])
+
 
 if __name__ == "__main__":
     f_modules = [
@@ -104,11 +109,11 @@ if __name__ == "__main__":
     ]
     checkModules(f_modules)
     f_modules = [
-        "jsondata/protomodules_208_209.json"
+        "jsondata/protomodules_320MLF3TCTT0208_320MLF3TCTT0209.json"
     ]
     checkModules(f_modules, isProto=True,
                  outputname="plots/ProtoModule_208_209_comparison")
 
-    f_proto = "jsondata/protomodules.json"
-    f_module = "jsondata/modules.json"
+    f_proto = "jsondata/protomodules_320MLF3TCTT0206_320MLF3TCTT0207.json"
+    f_module = "jsondata/modules_320MLF3TCTT0206_320MLF3TCTT0207.json"
     checkWholeModules(f_proto, f_module)
