@@ -40,6 +40,14 @@ def MeanAndRMS(data):
 def Angle(x1, y1, x2, y2):
     return math.degrees(math.atan2(y2 - y1, x2 - x1))
 
+def CleanAngle(angle):
+    # Normalize angle to be between -180 and 180 degrees
+    if angle > 180:
+        angle -= 360
+    elif angle < -180:
+        angle += 360
+    return angle
+
 
 def GetCenterAndAngle(X1, Y1, X2, Y2, X3=None, Y3=None, X4=None, Y4=None):
     if X3 is not None and Y3 is not None and X4 is not None and Y4 is not None:

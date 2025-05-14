@@ -220,6 +220,7 @@ def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparis
 def make_accuracy_plot(
         diffs_sensor_tray,
         diffs_pcb_tray,
+        suffix="",
 ):
     # Need at least matplotlib 3.5 version to use the plt.subplots(layout)
     fig, ax = plt.subplots(figsize=(6, 6), layout='constrained')
@@ -230,6 +231,9 @@ def make_accuracy_plot(
     #################################
     diffs_sensor_tray = np.array(diffs_sensor_tray)
     diffs_pcb_tray = np.array(diffs_pcb_tray)
+    
+    diffs_sensor_tray = np.clip(diffs_sensor_tray, -0.2, 0.3)
+    diffs_pcb_tray = np.clip(diffs_pcb_tray, -0.2, 0.3)
 
     ax.plot(diffs_sensor_tray[:,0] * 1e3, diffs_sensor_tray[:,1]*1e3, marker='o', markerfacecolor='#ff7f0e',
             markeredgecolor='#ff7f0e', linestyle='None', label='Sensor w.r.t. Tray')
@@ -301,15 +305,15 @@ def make_accuracy_plot(
         gauge_angle_max, -gauge_angle_max-gauge_angle_unit, -gauge_angle_unit), decimals=2), fontsize=8)
 
 
-    print("diff_angle_sensor_tray", diffs_sensor_tray)
     for _, _, diff_angle_sensor_tray in diffs_sensor_tray:
-        print("diff_angle_sensor_tray", diff_angle_sensor_tray)
+        diff_angle_sensor_tray = np.clip(diff_angle_sensor_tray, -gauge_angle_max, gauge_angle_max)
         ax_sub.annotate('', xy=(transfer_factor * diff_angle_sensor_tray * np.pi / 180., 2),
                         xytext=(0., -2.5),
                         arrowprops=dict(color='#ff7f0e',
                                         arrowstyle="->"),
                         )
     for _, _, diff_angle_pcb_tray in diffs_pcb_tray:
+        diff_angle_pcb_tray = np.clip(diff_angle_pcb_tray, -gauge_angle_max, gauge_angle_max)
         ax_sub.annotate('', xy=(transfer_factor * diff_angle_pcb_tray * np.pi / 180., 2),
                         xytext=(0., -2.5),
                         arrowprops=dict(color='#2ca02c',
@@ -351,5 +355,5 @@ def make_accuracy_plot(
                                     ),
                     )
 
-    plt.savefig(f'plots/wholemodule_accuracy.png')
+    plt.savefig(f'plots/wholemodule_accuracy_{suffix}.png')
     plt.close()

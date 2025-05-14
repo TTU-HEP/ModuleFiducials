@@ -1358,104 +1358,89 @@ def checkProtoModuleFiducialsGantry(useGantry=1):
         'BF': Fiducial(423.388, -1091.439)
     }
     fids_TFBFs = [fids_TFBF_1]
-    if useGantry:
-        silicon11 = SiliconFiducials(
-            {
-                "FD2": Fiducial(487.316, -770.810),  # channel 8
-                "FD1": Fiducial(487.318, -846.808),  # channel 1
-                "FD3": Fiducial(653.323, -846.848),  # channel 191
-                "FD4": Fiducial(653.321, -770.853),  # channel 197
-            },
-            TF=Fiducial(439.303, -699.301),
-            BF=Fiducial(423.388, -1091.439)
-        )
-        silicon21 = SiliconFiducials(
-            {
-                "FD1": Fiducial(602.517, -961.359),  # channel 1
-                "FD2": Fiducial(602.544, -1037.358),  # channel 8
-                "FD3": Fiducial(436.501, -961.372),  # channel 191
-                "FD4": Fiducial(436.531, -1037.373),  # channel 197
-            },
-            TF=Fiducial(439.303, -699.301),
-            BF=Fiducial(423.388, -1091.439)
-        )
-        silicon12 = SiliconFiducials(
-            {
-                "FD2": Fiducial(487.654, -770.551),  # channel 8
-                "FD1": Fiducial(487.620, -846.547),  # channel 1
-                "FD3": Fiducial(653.624, -846.667),  # channel 191
-                "FD4": Fiducial(653.660, -770.668),  # channel 197
-            },
-            TF=Fiducial(439.653, -699.020),
-            BF=Fiducial(423.561, -1091.152)
-        )
-        silicon22 = SiliconFiducials(
-            {
-                "FD1": Fiducial(602.755, -961.146),  # channel 1
-                "FD2": Fiducial(602.753, -1037.144),  # channel 8
-                "FD3": Fiducial(436.741, -961.086),  # channel 191
-                "FD4": Fiducial(436.737, -1037.086),  # channel 197
-            },
-            TF=Fiducial(439.653, -699.020),
-            BF=Fiducial(423.561, -1091.152)
-        )
-        silicon13 = SiliconFiducials(
-            {
-                "FD2": Fiducial(487.465, -770.740),  # channel 8
-                "FD1": Fiducial(487.444, -846.734),  # channel 1
-                "FD3": Fiducial(653.448, -846.817),  # channel 191
-                "FD4": Fiducial(653.468, -770.820),  # channel 197
-            },
-            TF=Fiducial(439.468, -699.218),
-            BF=Fiducial(423.404, -1091.346)
-        )
-        silicon23 = SiliconFiducials(
-            {
-                "FD1": Fiducial(602.641, -961.276),  # channel 1
-                "FD2": Fiducial(602.661, -1037.270),  # channel 8
-                "FD3": Fiducial(436.627, -961.263),  # channel 191
-                "FD4": Fiducial(436.644, -1037.265),  # channel 197
-            },
-            TF=Fiducial(439.468, -699.218),
-            BF=Fiducial(423.404, -1091.346)
-        )
-        silicon14 = SiliconFiducials(
-            {
-                "FD2": Fiducial(487.429, -770.556),  # channel 8
-                "FD1": Fiducial(487.460, -846.554),  # channel 1
-                "FD3": Fiducial(653.468, -846.522),  # channel 191
-                "FD4": Fiducial(653.433, -770.526),  # channel 197
-            },
-            TF=Fiducial(439.381, -699.066),
-            BF=Fiducial(423.554, -1091.204)
-        )
-        silicon24 = SiliconFiducials(
-            {
-                "FD1": Fiducial(602.700, -961.026),  # channel 1
-                "FD2": Fiducial(602.770, -1037.023),  # channel 8
-                "FD3": Fiducial(436.686, -961.127),  # channel 191
-                "FD4": Fiducial(436.754, -1037.125),  # channel 197
-            },
-            TF=Fiducial(439.381, -699.066),
-            BF=Fiducial(423.554, -1091.204)
-        )
-        silicon1s = [silicon14]
-        silicon2s = [silicon24]
-    else:
-        hex1 = HexaFiducials(
-            {"FD3": Fiducial(132.024, 367.952),
-             "FD6": Fiducial(138.450, 208.073)},
-            TF=Fiducial(0, 392.421),
-            BF=Fiducial(0, 0.)
-        )
-        hex2 = HexaFiducials(
-            {"FD3": Fiducial(95.477, 15.729),
-             "FD6": Fiducial(88.967, 175.588)},
-            TF=Fiducial(0, 392.421),
-            BF=Fiducial(0, 0)
-        )
-        # hex1 = hex1.Align(fids_TFBF)
-        # hex2 = hex2.Align(fids_TFBF)
+    silicon11 = SiliconFiducials(
+        {
+            "FD2": Fiducial(487.316, -770.810),  # channel 8
+            "FD1": Fiducial(487.318, -846.808),  # channel 1
+            "FD3": Fiducial(653.323, -846.848),  # channel 191
+            "FD4": Fiducial(653.321, -770.853),  # channel 197
+        },
+        TF=Fiducial(439.303, -699.301),
+        BF=Fiducial(423.388, -1091.439)
+    )
+    silicon21 = SiliconFiducials(
+        {
+            "FD1": Fiducial(602.517, -961.359),  # channel 1
+            "FD2": Fiducial(602.544, -1037.358),  # channel 8
+            "FD3": Fiducial(436.501, -961.372),  # channel 191
+            "FD4": Fiducial(436.531, -1037.373),  # channel 197
+        },
+        TF=Fiducial(439.303, -699.301),
+        BF=Fiducial(423.388, -1091.439)
+    )
+    silicon12 = SiliconFiducials(
+        {
+            "FD2": Fiducial(487.654, -770.551),  # channel 8
+            "FD1": Fiducial(487.620, -846.547),  # channel 1
+            "FD3": Fiducial(653.624, -846.667),  # channel 191
+            "FD4": Fiducial(653.660, -770.668),  # channel 197
+        },
+        TF=Fiducial(439.653, -699.020),
+        BF=Fiducial(423.561, -1091.152)
+    )
+    silicon22 = SiliconFiducials(
+        {
+            "FD1": Fiducial(602.755, -961.146),  # channel 1
+            "FD2": Fiducial(602.753, -1037.144),  # channel 8
+            "FD3": Fiducial(436.741, -961.086),  # channel 191
+            "FD4": Fiducial(436.737, -1037.086),  # channel 197
+        },
+        TF=Fiducial(439.653, -699.020),
+        BF=Fiducial(423.561, -1091.152)
+    )
+    silicon13 = SiliconFiducials(
+        {
+            "FD2": Fiducial(487.465, -770.740),  # channel 8
+            "FD1": Fiducial(487.444, -846.734),  # channel 1
+            "FD3": Fiducial(653.448, -846.817),  # channel 191
+            "FD4": Fiducial(653.468, -770.820),  # channel 197
+        },
+        TF=Fiducial(439.468, -699.218),
+        BF=Fiducial(423.404, -1091.346)
+    )
+    silicon23 = SiliconFiducials(
+        {
+            "FD1": Fiducial(602.641, -961.276),  # channel 1
+            "FD2": Fiducial(602.661, -1037.270),  # channel 8
+            "FD3": Fiducial(436.627, -961.263),  # channel 191
+            "FD4": Fiducial(436.644, -1037.265),  # channel 197
+        },
+        TF=Fiducial(439.468, -699.218),
+        BF=Fiducial(423.404, -1091.346)
+    )
+    silicon14 = SiliconFiducials(
+        {
+            "FD2": Fiducial(487.429, -770.556),  # channel 8
+            "FD1": Fiducial(487.460, -846.554),  # channel 1
+            "FD3": Fiducial(653.468, -846.522),  # channel 191
+            "FD4": Fiducial(653.433, -770.526),  # channel 197
+        },
+        TF=Fiducial(439.381, -699.066),
+        BF=Fiducial(423.554, -1091.204)
+    )
+    silicon24 = SiliconFiducials(
+        {
+            "FD1": Fiducial(602.700, -961.026),  # channel 1
+            "FD2": Fiducial(602.770, -1037.023),  # channel 8
+            "FD3": Fiducial(436.686, -961.127),  # channel 191
+            "FD4": Fiducial(436.754, -1037.125),  # channel 197
+        },
+        TF=Fiducial(439.381, -699.066),
+        BF=Fiducial(423.554, -1091.204)
+    )
+    silicon1s = [silicon14]
+    silicon2s = [silicon24]
+    
     tray = tray_org.Align(fids_TFBFs[-1])
     truths_1 = [
         tray.GetCenter(1)[0], tray.GetCenter(1)[1], tray.GetAngle(1)]
