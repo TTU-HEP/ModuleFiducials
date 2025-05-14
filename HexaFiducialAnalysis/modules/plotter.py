@@ -218,12 +218,8 @@ def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparis
 
 
 def make_accuracy_plot(
-        rel_sensor_X=0.,
-        rel_sensor_Y=0.,
-        rel_pcb_X=0.,
-        rel_pcb_Y=0.,
-        rel_sensor_angle=0.,
-        rel_pcb_angle=0.
+        diffs_sensor_tray,
+        diffs_pcb_tray,
 ):
     # Need at least matplotlib 3.5 version to use the plt.subplots(layout)
     fig, ax = plt.subplots(figsize=(6, 6), layout='constrained')
@@ -232,14 +228,12 @@ def make_accuracy_plot(
     #################################
     #          Offset part          #
     #################################
-    rel_sensor_X = np.array([rel_sensor_X * 1000])
-    rel_sensor_Y = np.array([rel_sensor_Y * 1000])
-    rel_pcb_X = np.array([rel_pcb_X * 1000])
-    rel_pcb_Y = np.array([rel_pcb_Y * 1000])
+    diffs_sensor_tray = np.array(diffs_sensor_tray)
+    diffs_pcb_tray = np.array(diffs_pcb_tray)
 
-    ax.plot(rel_sensor_X, rel_sensor_Y, marker='o', markerfacecolor='#ff7f0e',
+    ax.plot(diffs_sensor_tray[:,0] * 1e3, diffs_sensor_tray[:,1]*1e3, marker='o', markerfacecolor='#ff7f0e',
             markeredgecolor='#ff7f0e', linestyle='None', label='Sensor w.r.t. Tray')
-    ax.plot(rel_pcb_X,    rel_pcb_Y,    marker='h', markerfacecolor='#2ca02c',
+    ax.plot(diffs_pcb_tray[:,0] * 1e3, diffs_pcb_tray[:,1]*1e3,   marker='h', markerfacecolor='#2ca02c',
             markeredgecolor='#2ca02c', linestyle='None', label='PCB w.r.t. Tray')
     ax.plot(np.array([0.]), np.array([0.]), marker='o', markerfacecolor='k',
             markeredgecolor='k', linestyle='None', label='Tray')
@@ -278,8 +272,8 @@ def make_accuracy_plot(
     #################################
     ax_sub = fig.add_axes([.52, .58, .42, .25], polar=True)
 
-    gauge_angle_max = 0.4
-    gauge_angle_unit = 0.1
+    gauge_angle_max = 0.04
+    gauge_angle_unit = 0.01
     orig_gauge_angle_max = 40
     transfer_factor = 40. / gauge_angle_max
     orig_gauge_angle_unit = transfer_factor * gauge_angle_unit
@@ -304,18 +298,23 @@ def make_accuracy_plot(
     ax_sub.set_thetagrids(np.arange(
         orig_gauge_angle_max, -orig_gauge_angle_max-orig_gauge_angle_unit, -orig_gauge_angle_unit))
     ax_sub.set_xticklabels(np.round(np.arange(
-        gauge_angle_max, -gauge_angle_max-gauge_angle_unit, -gauge_angle_unit), decimals=2))
+        gauge_angle_max, -gauge_angle_max-gauge_angle_unit, -gauge_angle_unit), decimals=2), fontsize=8)
 
-    ax_sub.annotate('', xy=(transfer_factor * rel_sensor_angle * np.pi / 180., 2),
-                    xytext=(0., -2.5),
-                    arrowprops=dict(color='#ff7f0e',
-                                    arrowstyle="->"),
-                    )
-    ax_sub.annotate('', xy=(transfer_factor * rel_pcb_angle * np.pi / 180., 1.6),
-                    xytext=(0., -2.5),
-                    arrowprops=dict(color='#2ca02c',
-                                    arrowstyle="->"),
-                    )
+
+    print("diff_angle_sensor_tray", diffs_sensor_tray)
+    for _, _, diff_angle_sensor_tray in diffs_sensor_tray:
+        print("diff_angle_sensor_tray", diff_angle_sensor_tray)
+        ax_sub.annotate('', xy=(transfer_factor * diff_angle_sensor_tray * np.pi / 180., 2),
+                        xytext=(0., -2.5),
+                        arrowprops=dict(color='#ff7f0e',
+                                        arrowstyle="->"),
+                        )
+    for _, _, diff_angle_pcb_tray in diffs_pcb_tray:
+        ax_sub.annotate('', xy=(transfer_factor * diff_angle_pcb_tray * np.pi / 180., 2),
+                        xytext=(0., -2.5),
+                        arrowprops=dict(color='#2ca02c',
+                                        arrowstyle="->"),
+                        )
 
     ax_sub.annotate('', xy=(transfer_factor * 0. * np.pi / 180., 2),
                     xytext=(0., -2.5),
@@ -323,29 +322,29 @@ def make_accuracy_plot(
                                     arrowstyle="->",
                                     ),
                     )
-    ax_sub.annotate('', xy=(transfer_factor * 0.2 * np.pi / 180., 2),
-                    xytext=(transfer_factor * 0.2 * np.pi / 180., 0.),
+    ax_sub.annotate('', xy=(transfer_factor * 0.02 * np.pi / 180., 2),
+                    xytext=(transfer_factor * 0.02 * np.pi / 180., 0.),
                     arrowprops=dict(color='b',
                                     arrowstyle="-",
                                     linestyle="dotted"
                                     ),
                     )
-    ax_sub.annotate('', xy=(transfer_factor * -0.2 * np.pi / 180., 2),
-                    xytext=(transfer_factor * -0.2 * np.pi / 180., 0.),
+    ax_sub.annotate('', xy=(transfer_factor * -0.02 * np.pi / 180., 2),
+                    xytext=(transfer_factor * -0.02 * np.pi / 180., 0.),
                     arrowprops=dict(color='b',
                                     arrowstyle="-",
                                     linestyle="dotted"
                                     ),
                     )
-    ax_sub.annotate('', xy=(transfer_factor * 0.4 * np.pi / 180., 2),
-                    xytext=(transfer_factor * 0.4 * np.pi / 180., 0.),
+    ax_sub.annotate('', xy=(transfer_factor * 0.04 * np.pi / 180., 2),
+                    xytext=(transfer_factor * 0.04 * np.pi / 180., 0.),
                     arrowprops=dict(color='r',
                                     arrowstyle="-",
                                     linestyle="dotted"
                                     ),
                     )
-    ax_sub.annotate('', xy=(transfer_factor * -0.4 * np.pi / 180., 2),
-                    xytext=(transfer_factor * -0.4 * np.pi / 180., 0.),
+    ax_sub.annotate('', xy=(transfer_factor * -0.04 * np.pi / 180., 2),
+                    xytext=(transfer_factor * -0.04 * np.pi / 180., 0.),
                     arrowprops=dict(color='r',
                                     arrowstyle="-",
                                     linestyle="dotted"
