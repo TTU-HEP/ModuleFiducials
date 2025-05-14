@@ -218,7 +218,6 @@ def plot_truth_vs_recos_2plots(truth, recos, output_name="plots/hexagon_comparis
 
 
 def make_accuracy_plot(
-        module_name='M01',
         rel_sensor_X=0.,
         rel_sensor_Y=0.,
         rel_pcb_X=0.,
@@ -226,19 +225,9 @@ def make_accuracy_plot(
         rel_sensor_angle=0.,
         rel_pcb_angle=0.
 ):
-    """
-    rel_sensor_X : relative X of sensor w.r.t. baseplate [unit : mm]
-    rel_sensor_Y : relative Y of sensor w.r.t. baseplate [unit : mm]
-    rel_pcb_X    : relative X of pcb w.r.t. baseplate    [unit : mm]
-    rel_pcb_Y    : relative Y of pcb w.r.t. baseplate    [unit : mm]
-    rel_sensor_angle : relative angle of sensor w.r.t. baseplate [unit : degree]
-    rel_pcb_angle    : relative angle of pcb w.r.t. baseplate    [unit : degree]
-    """
-
     # Need at least matplotlib 3.5 version to use the plt.subplots(layout)
     fig, ax = plt.subplots(figsize=(6, 6), layout='constrained')
     ax.set_box_aspect(1)
-    ax.set_title(f'{module_name} accuracy plot', y=1.15, fontsize=20)
 
     #################################
     #          Offset part          #
@@ -249,11 +238,11 @@ def make_accuracy_plot(
     rel_pcb_Y = np.array([rel_pcb_Y * 1000])
 
     ax.plot(rel_sensor_X, rel_sensor_Y, marker='o', markerfacecolor='#ff7f0e',
-            markeredgecolor='#ff7f0e', linestyle='None', label='Sensor w.r.t. Baseplate')
+            markeredgecolor='#ff7f0e', linestyle='None', label='Sensor w.r.t. Tray')
     ax.plot(rel_pcb_X,    rel_pcb_Y,    marker='h', markerfacecolor='#2ca02c',
-            markeredgecolor='#2ca02c', linestyle='None', label='PCB w.r.t. Baseplate')
+            markeredgecolor='#2ca02c', linestyle='None', label='PCB w.r.t. Tray')
     ax.plot(np.array([0.]), np.array([0.]), marker='o', markerfacecolor='k',
-            markeredgecolor='k', linestyle='None', label='Baseplate')
+            markeredgecolor='k', linestyle='None', label='Tray')
 
     ax.set_xlabel('$\Delta x$ [$\mu m$]',  fontsize=18)
     ax.set_ylabel('$\Delta y$ [$\mu m$]', fontsize=18)
@@ -280,8 +269,9 @@ def make_accuracy_plot(
                     labelsize=0, length=5, width=1, right=True, top=True)
     plt.tick_params(axis='both', which='major', direction='in',
                     labelsize=18, length=7, width=1.5, right=True, top=True)
-    ax.legend(bbox_to_anchor=(0., 1.02, 1., .102),
-              loc='lower right', ncol=2, borderaxespad=0.)
+    #ax.legend(bbox_to_anchor=(0., 1.02, 1., .102),
+    #          loc='lower right', ncol=2, borderaxespad=0.)
+    ax.legend(loc='upper left')
 
     #################################
     #      Rotation angle part      #
@@ -362,5 +352,5 @@ def make_accuracy_plot(
                                     ),
                     )
 
-    plt.savefig(f'plots/{module_name}_accuracy.png')
+    plt.savefig(f'plots/wholemodule_accuracy.png')
     plt.close()

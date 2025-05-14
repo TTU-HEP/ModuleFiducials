@@ -93,8 +93,7 @@ def checkWholeModules(f_proto, f_module):
     plot_truth_vs_recos_2plots(truths_pos2, recos_pos2,
                                output_name="plots/WholeModule_comparison_pos2_Gantry.png", legends=legends, colors=colors)
 
-    make_accuracy_plot("Module_1",
-                       recos_pos1[0][0] - truths_pos1[0],
+    make_accuracy_plot(recos_pos1[0][0] - truths_pos1[0],
                        recos_pos1[0][1] - truths_pos1[1],
                        recos_pos1[1][0] - truths_pos1[0],
                        recos_pos1[1][1] - truths_pos1[1],
