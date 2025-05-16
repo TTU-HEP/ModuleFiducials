@@ -34,20 +34,22 @@ def readJsonFile(f_input, isProto=False):
     else:
         className = HexaFiducials
 
+    hex_pos1 = None
     if "pos1" in data_protos:
         pos1_info = data_protos["pos1"]
         pos1 = {}
         for key, value in pos1_info.items():
             pos1[key] = Fiducial(value[0], value[1])
 
-        hex_pos1 = className(pos1, TF=tray["TF"], BF=tray["BF"])
+        hex_pos1 = className(pos1, TF=tray["TF"], BF=tray["BF"], isPos1=True)
 
+    hex_pos2 = None
     if "pos2" in data_protos:
         pos2_info = data_protos["pos2"]
         pos2 = {}
         for key, value in pos2_info.items():
             pos2[key] = Fiducial(value[0], value[1])
 
-        hex_pos2 = className(pos2, TF=tray["TF"], BF=tray["BF"])
+        hex_pos2 = className(pos2, TF=tray["TF"], BF=tray["BF"], isPos1=False)
 
     return tray, hex_pos1, hex_pos2

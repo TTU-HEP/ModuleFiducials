@@ -220,7 +220,7 @@ class HexaFiducials(object):
     or the two fiducials (FD3, FD6)
     """
 
-    def __init__(self, fiducials: dict, isOGP=True, TF=None, BF=None):
+    def __init__(self, fiducials: dict, isOGP=True, TF=None, BF=None, isPos1=True):
         for fiducial in fiducials.values():
             assert isinstance(fiducial, Fiducial), \
                 "All fiducials must be instances of the Fiducial class"
@@ -228,6 +228,7 @@ class HexaFiducials(object):
         self.TF = TF
         self.BF = BF
         self.isOGP = isOGP
+        self.isPos1 = isPos1
 
     def __str__(self):
         return f"HexaFiducials({self.fiducials})"
@@ -270,7 +271,7 @@ class HexaFiducials(object):
         for name, fiducial in self.fiducials.items():
             fids_new[name] = AlignTFBF(
                 fiducial, fids_TF_BF_current, fids_TF_BF, base=base)
-        return HexaFiducials(fids_new, isOGP=self.isOGP, TF=fids_TF_BF['TF'], BF=fids_TF_BF['BF'])
+        return HexaFiducials(fids_new, isOGP=self.isOGP, TF=fids_TF_BF['TF'], BF=fids_TF_BF['BF'], isPos1=self.isPos1)
 
     def XYPoints(self):
         return np.array([fiducial.XY() for fiducial in self.fiducials.values()])
@@ -374,7 +375,7 @@ class SiliconFiducials(object):
     Use the four fiducials to define the center and angle of the hexagon
     """
 
-    def __init__(self, fiducials: dict, isOGP=True, TF=None, BF=None):
+    def __init__(self, fiducials: dict, isOGP=True, TF=None, BF=None, isPos1=True):
         for fiducial in fiducials.values():
             assert isinstance(fiducial, Fiducial), \
                 "All fiducials must be instances of the Fiducial class"
@@ -382,6 +383,7 @@ class SiliconFiducials(object):
         self.TF = TF
         self.BF = BF
         self.isOGP = isOGP
+        self.isPos1 = isPos1
 
     def __str__(self):
         return f"SiliconFiducials({self.fiducials})"
@@ -424,7 +426,7 @@ class SiliconFiducials(object):
         for name, fiducial in self.fiducials.items():
             fids_new[name] = AlignTFBF(
                 fiducial, fids_TF_BF_current, fids_TF_BF, base=base)
-        return SiliconFiducials(fids_new, isOGP=self.isOGP, TF=fids_TF_BF['TF'], BF=fids_TF_BF['BF'])
+        return SiliconFiducials(fids_new, isOGP=self.isOGP, TF=fids_TF_BF['TF'], BF=fids_TF_BF['BF'], isPos1=self.isPos1)
 
     def XYPoints(self):
         return np.array([fiducial.XY() for fiducial in self.fiducials.values()])
