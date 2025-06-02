@@ -6,7 +6,9 @@ from modules.components import SiliconFiducials, HexaFiducials
 
 
 f_tray = "jsondata/tray.json"
+f_tray2 = "jsondata/tray2.json"
 tray_org = LoadTray(f_tray)
+tray_org2 = LoadTray(f_tray2)
 
 tray_base = {
     'TF': Fiducial(439.303, -699.306),
@@ -14,8 +16,9 @@ tray_base = {
 }
 
 
-def checkModules(f_modules, isProto=False, outputname="plots/Module_comparison"):
-    tray = tray_org.Align(tray_base)
+def checkModules(f_modules, isProto=False, outputname="plots/Module_comparison", useTray2=False):
+    tray_tmp = tray_org2 if useTray2 else tray_org
+    tray = tray_tmp.Align(tray_base)
     truths_pos1 = [tray.GetCenter(1)[0], tray.GetCenter(1)[
         1], tray.GetAngle(1)]
     truths_pos2 = [tray.GetCenter(2)[0], tray.GetCenter(2)[
@@ -140,14 +143,32 @@ if __name__ == "__main__":
         "jsondata/modules_320MLF3TCTT0210.json",
         "jsondata/modules_320MLF3TCTT0210_OGP.json"
     ]
-    checkModules(f_modules)
+    f_modules = [
+        "jsondata/modules_320MLF3TCTT0201_dryrun1.json",
+        "jsondata/modules_320MLF3TCTT0201_dryrun2.json",
+    ]
+    # checkModules(f_modules)
+    f_modules = [
+        "jsondata/protomodules_320MLF3TCTT0201.json",
+    ]
+    f_modules = [
+        "jsondata/modules_320MLF3TCTT0202_320MLF3TCTT0203_dryrun1.json",
+        "jsondata/modules_320MLF3TCTT0202_320MLF3TCTT0203_dryrun2.json",
+        "jsondata/modules_320MLF3TCTT0202_320MLF3TCTT0203_dryrun3.json",
+    ]
+    checkModules(f_modules, isProto=False,
+                 outputname="plots/Module_202_203_comparison", useTray2=True)
     # f_modules = [
     #    "jsondata/protomodules_320MLF3TCTT0208_320MLF3TCTT0209.json"
     # ]
     # checkModules(f_modules, isProto=True,
     #             outputname="plots/ProtoModule_208_209_comparison")
+    import sys
+    sys.exit(0)
 
     data_modules = [
+        ["jsondata/modules_320MLF3TCTT0201.json",
+         "jsondata/protomodules_320MLF3TCTT0201.json", "X_0201"],
         ["jsondata/modules_320MLF3TCTT0210.json",
          "jsondata/protomodules_320MLF3TCTT0210.json", "X_0210"],
         ["jsondata/modules_320MLF3TCTT0208_320MLF3TCTT0209_OGP.json",
